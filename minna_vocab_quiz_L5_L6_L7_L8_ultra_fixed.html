@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>大家的日本語 N5｜L5–L8 單字小考（固定題庫）</title>
+  <style>
+    :root{ --bg1:#fff6dc; --bg2:#ffeec5; --paper:#fff7da; --ink:#1d1608; --accent:#d9983d; --accent-d:#b67a2f; --ok:#2e7d32; --bad:#c62828; --shadow:0 10px 20px rgba(0,0,0,.08); }
+    html,body{height:100%}
+    body{margin:0;font-family: ui-rounded,"SF Pro Rounded",-apple-system,system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial,sans-serif;color:var(--ink);
+      background: radial-gradient(120% 120% at 0% 0%, var(--bg1), var(--bg2)); background-attachment:fixed; -webkit-tap-highlight-color: transparent;}
+    .app{min-height:100dvh;display:flex;flex-direction:column}
+    header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:color-mix(in oklab,#fff 70%,transparent);backdrop-filter: blur(6px);border-bottom:1px dashed rgba(0,0,0,.08)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:14px;background:var(--paper);display:grid;place-items:center;font-weight:900;color:var(--accent);box-shadow:inset 0 0 0 2px rgba(0,0,0,.06)}
+    .title{font-weight:900;color:var(--accent)}
+    .hud{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .chip{background:var(--paper);padding:6px 10px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)}
+    main{flex:1;padding:14px;display:flex}
+    .card{margin:auto;width:min(1000px,100%);background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:var(--shadow);padding:16px 14px}
+    .section{display:flex;flex-direction:column;gap:12px}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:900;box-shadow:0 6px 0 var(--accent-d)}
+    .btn:active{transform:translateY(2px);box-shadow:0 4px 0 var(--accent-d)}
+    .ghost{background:#fff;color:var(--accent);box-shadow: inset 0 0 0 2px var(--accent)}
+    .pill{background:#fff;border:1px solid rgba(0,0,0,.08);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+    .title2{font-weight:900;color:#5f430e}
+    .qtext{display:flex;align-items:center;gap:10px;font-size:1.6rem;font-weight:900;line-height:1.6;word-break:keep-all}
+    .starbtn{border:0;background:transparent;font-size:1.4rem;cursor:pointer}
+    .star-on{color:#f4b400;filter:drop-shadow(0 1px 0 rgba(0,0,0,.2))}
+    .choices{display:grid;grid-template-columns:1fr;gap:10px}
+    .choice{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 12px;font-size:1.1rem;font-weight:800;box-shadow:var(--shadow)}
+    .choice:active{transform:scale(.99)}
+    .key{min-width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--paper);color:var(--accent);border:1px solid rgba(0,0,0,.06)}
+    .result{margin-top:10px;padding:10px;border-radius:12px;border:2px dashed rgba(0,0,0,.12);display:none}
+    .result.ok{border-color: color-mix(in oklab, var(--ok) 40%, transparent)}
+    .result.bad{border-color: color-mix(in oklab, var(--bad) 40%, transparent)}
+    footer{position:sticky;bottom:0;z-index:10;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in oklab,#fff 70%,transparent);backdrop-filter: blur(6px);border-top:1px dashed rgba(0,0,0,.08)}
+    .meter{flex:1;display:flex;gap:10px;align-items:center}
+    .progress{height:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:999px;overflow:hidden;flex:1}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,#d9983d,#f7c66d)}
+    .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+    .item{background:var(--paper);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .hint{opacity:.85;font-size:.95rem}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">単</div>
+        <div class="title">大家的日本語 N5｜L5–L8 單字小考（固定題庫）</div>
+      </div>
+      <div class="hud">
+        <div class="chip">分數 <span id="score">0</span></div>
+        <div class="chip">連對 <span id="streak">0</span></div>
+        <div class="chip" id="timeChip" style="display:none">⏱ <span id="timeLeft">60</span>s</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="card section" id="setup">
+        <div class="title2">模式</div>
+        <div class="grid">
+          <label class="row"><input type="radio" name="mode" value="jp2zh" checked> <span class="pill">看到日文 → 選中文</span></label>
+          <label class="row"><input type="radio" name="mode" value="zh2jp"> <span class="pill">看到中文 → 選日文</span></label>
+          <label class="row"><input type="radio" name="mode" value="kanji2kana"> <span class="pill">讀音模式：漢字 → 假名</span></label>
+        </div>
+
+        <div class="title2">範圍</div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="useL5" checked> L5</label>
+          <label class="pill"><input type="checkbox" id="useL6" checked> L6</label>
+          <label class="pill"><input type="checkbox" id="useL7" checked> L7</label>
+          <label class="pill"><input type="checkbox" id="useL8" checked> L8</label>
+        </div>
+
+        <div class="title2">標籤篩選</div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="tagSuffix"> 接尾詞</label>
+          <label class="pill"><input type="checkbox" id="tagCountry"> 國家</label>
+          <label class="pill"><input type="checkbox" id="tagTime"> 時間類</label>
+          <span class="pill"><input type="checkbox" id="onlyStar"> 只出 ⭐️ 星號單字</span>
+        </div>
+
+        <div class="title2">題數 & 限時</div>
+        <div class="row">
+          <button class="pill" data-q="10">10 題</button>
+          <button class="pill" data-q="20">20 題</button>
+          <span id="qcount" class="pill">目前：10 題</span>
+        </div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
+          <label class="pill"><input type="checkbox" id="byLesson"> 依課次順序（關閉＝隨機混合）</label>
+        </div>
+
+        <details>
+          <summary>題庫一覽（可直接加星）</summary>
+          <div class="title2" style="margin-top:6px">L5</div>
+          <div class="list" id="bankL5"></div>
+          <div class="title2" style="margin-top:10px">L6</div>
+          <div class="list" id="bankL6"></div>
+          <div class="title2" style="margin-top:10px">L7</div>
+          <div class="list" id="bankL7"></div>
+          <div class="title2" style="margin-top:10px">L8</div>
+          <div class="list" id="bankL8"></div>
+        </details>
+
+        <div class="row"><button class="btn" id="startBtn">開始測驗 ▶</button></div>
+      </section>
+
+      <section class="card section" id="quiz" style="display:none">
+        <div class="row"><span class="pill" id="meta">第 1 / 10 題</span><span class="pill" id="modeTag">JP→ZH</span></div>
+        <div class="qtext" id="qtext">問題</div>
+        <div class="choices" id="choices"></div>
+        <div class="result" id="resultBox">
+          <div id="resHead" style="font-weight:900;margin-bottom:4px"></div>
+          <div id="resBody"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="nextBtn" disabled>下一題 →</button>
+          <button class="ghost" id="speakBtn">朗讀</button>
+        </div>
+      </section>
+
+      <section class="card section" id="summary" style="display:none">
+        <div class="title2">完成！</div>
+        <div>分數：<b id="finalScore">0</b> ／ 題數：<b id="finalTotal">0</b></div>
+        <div>最佳連對：<b id="finalStreak">0</b></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="retryWrong" disabled>錯題重練 ▶</button>
+          <button class="ghost" id="restart">回到設定頁</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="meter">
+        <span class="pill">進度</span>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const T = { SUFFIX:"接尾詞", COUNTRY:"國家", TIME:"時間" };
+    function parseKanjiKanaFlexible(jp){
+      let m = jp.match(/^(.*)（(.*)）$/);
+      if(m){ return {kana:m[1], kanji:m[2]} }
+      m = jp.match(/^(.*)\((.*)\)$/);
+      if(m){ return {kana:m[1], kanji:m[2]} }
+      return {kana:jp, kanji:jp};
+    }
+    function toObj(jp, zh, tags, l){
+      const {kana, kanji} = parseKanjiKanaFlexible(jp.trim());
+      const normTags = (tags||[]).map(t=>t.trim()).filter(Boolean);
+      return {id:jp.trim()+"__"+zh.trim(), jp:jp.trim(), zh:zh.trim(), kana, kanji, tags:normTags, l};
+    }
+
+    // ---- L5
+    const L5 = [
+      toObj("いきます（行きます）","去",[], "L5"),
+      toObj("きます（来ます）","來",[], "L5"),
+      toObj("かえります（帰ります）","回",[], "L5"),
+      toObj("がっこう（学校）","學校",[], "L5"),
+      toObj("スーパー","超市",[], "L5"),
+      toObj("えき（駅）","車站",[], "L5"),
+      toObj("ひこうき（飛行機）","飛機",[], "L5"),
+      toObj("ふね（船）","船",[], "L5"),
+      toObj("でんしゃ（電車）","電車",[], "L5"),
+      toObj("ちかてつ（地下鉄）","地下鐵",[], "L5"),
+      toObj("しんかんせん（新幹線）","新幹線",[], "L5"),
+      toObj("バス","公車、巴士",[], "L5"),
+      toObj("タクシー","計程車",[], "L5"),
+      toObj("じてんしゃ（自転車）","自行車、腳踏車",[], "L5"),
+      toObj("あるいて（歩いて）","步行",[], "L5"),
+      toObj("ひと（人）","人",[], "L5"),
+      toObj("ともだち（友達）","朋友",[], "L5"),
+      toObj("かれ（彼）","他、男朋友",[], "L5"),
+      toObj("かのじょ（彼女）","她、女朋友",[], "L5"),
+      toObj("かぞく（家族）","家人、家屬",[], "L5"),
+      toObj("ひとりで（一人で）","一個人、自己",[], "L5"),
+      toObj("せんしゅう（先週）","上週、上星期",[T.TIME], "L5"),
+      toObj("こんしゅう（今週）","本週、這星期",[T.TIME], "L5"),
+      toObj("らいしゅう（来週）","下週、下星期",[T.TIME], "L5"),
+      toObj("せんげつ（先月）","上個月",[T.TIME], "L5"),
+      toObj("こんげつ（今月）","這個月",[T.TIME], "L5"),
+      toObj("らいげつ（来月）","下個月",[T.TIME], "L5"),
+      toObj("きょねん（去年）","去年",[T.TIME], "L5"),
+      toObj("ことし（今年）","今年",[T.TIME], "L5"),
+      toObj("らいねん（来年）","明年",[T.TIME], "L5"),
+      toObj("⋯ねん","...年",[T.TIME], "L5"),
+      toObj("なんねん（何年）","幾年",[T.TIME], "L5"),
+      toObj("⋯がつ","...月",[T.TIME], "L5"),
+      toObj("なんがつ（何月）","幾月",[T.TIME], "L5"),
+      toObj("ついたち（1 日）","1 號",[T.TIME], "L5"),
+      toObj("ふつか（2 日）","2 號、兩天",[T.TIME], "L5"),
+      toObj("みっか（3 日）","3 號、三天",[T.TIME], "L5"),
+      toObj("よっか（4 日）","4 號、四天",[T.TIME], "L5"),
+      toObj("いつか（5 日）","5 號、五天",[T.TIME], "L5"),
+      toObj("むいか（6 日）","6 號、六天",[T.TIME], "L5"),
+      toObj("なのか（7 日）","7 號、七天",[T.TIME], "L5"),
+      toObj("ようか（8 日）","8 號、八天",[T.TIME], "L5"),
+      toObj("ここのか（9 日）","9 號、九天",[T.TIME], "L5"),
+      toObj("とおか（10 日）","10 號、十天",[T.TIME], "L5"),
+      toObj("じゅうよっか（14 日）","14 號、十四天",[T.TIME], "L5"),
+      toObj("はつか（20 日）","20 號、二十天",[T.TIME], "L5"),
+      toObj("にじゅうよっか（24 日）","24 日、二十四天",[T.TIME], "L5"),
+      toObj("⋯にち（…日）","...號、...天",[T.TIME], "L5"),
+      toObj("なんにち（何日）","幾號、幾天",[T.TIME], "L5"),
+      toObj("いつ","什麼時候",[T.TIME], "L5"),
+      toObj("たんじょうび（誕生日）","生日",[], "L5"),
+      toObj("[どうも]ありがとうございました。","非常感謝。",[], "L5"),
+      toObj("どういたしまして。","不客氣。",[], "L5"),
+      toObj("⋯ばんせん（...番線）","第⋯號月臺",[], "L5"),
+      toObj("つぎの（次の）","下一個、下一班",[], "L5"),
+      toObj("ふつう（普通）","普通車",[], "L5"),
+      toObj("きゅうこう（急行）","快車",[], "L5"),
+      toObj("とっきゅう（特急）","特快車",[], "L5"),
+    ];
+
+    // ---- L6
+    const L6 = [
+      toObj("たべます（食べます）","吃",[], "L6"),
+      toObj("のみます（飲みます）","喝",[], "L6"),
+      toObj("すいます（吸います）","吸",[], "L6"),
+      toObj("みます（見ます）","看",[], "L6"),
+      toObj("ききます（聞きます）","聽",[], "L6"),
+      toObj("よみます（読みます）","閱讀",[], "L6"),
+      toObj("かきます（書きます）","書寫",[], "L6"),
+      toObj("かいます（買います）","購買",[], "L6"),
+      toObj("とります（撮ります）","拍攝〔照片〕",[], "L6"),
+      toObj("します","做",[], "L6"),
+      toObj("あいます（会います）","〔跟朋友〕見面",[], "L6"),
+      toObj("ごはん","白飯、飯",[], "L6"),
+      toObj("あさごはん（朝ごはん）","早餐",[], "L6"),
+      toObj("ひるごはん（昼ごはん）","午餐",[], "L6"),
+      toObj("ばんごはん（晩ごはん）","晚餐",[], "L6"),
+      toObj("パン","麵包",[], "L6"),
+      toObj("たまご（卵）","蛋",[], "L6"),
+      toObj("にく（肉）","肉",[], "L6"),
+      toObj("さかな（魚）","魚",[], "L6"),
+      toObj("やさい（野菜）","蔬菜",[], "L6"),
+      toObj("くだもの（果物）","水果",[], "L6"),
+      toObj("みず（水）","水",[], "L6"),
+      toObj("おちゃ（お茶）","茶",[], "L6"),
+      toObj("こうちゃ（紅茶）","紅茶",[], "L6"),
+      toObj("ぎゅうにゅう（牛乳）","牛奶",[], "L6"),
+      toObj("ジュース","果汁",[], "L6"),
+      toObj("ビール","啤酒",[], "L6"),
+      toObj("[お]さけ（[お]酒）","酒類、日本酒",[], "L6"),
+      toObj("たばこ","香菸",[], "L6"),
+      toObj("てがみ（手紙）","信",[], "L6"),
+      toObj("レポート","報告",[], "L6"),
+      toObj("しゃしん（写真）","照片",[], "L6"),
+      toObj("ビデオ","影片、錄影帶",[], "L6"),
+      toObj("みせ（店）","商店",[], "L6"),
+      toObj("にわ（庭）","庭院、院子",[], "L6"),
+      toObj("しゅくだい（宿題）","作業",[], "L6"),
+      toObj("テニス","網球",[], "L6"),
+      toObj("サッカー","足球",[], "L6"),
+      toObj("[お]はなみ（[お]花見）","賞花",[], "L6"),
+      toObj("なに（何）","什麼",[], "L6"),
+      toObj("いっしょに","一起",[], "L6"),
+      toObj("ちょっと","一會、一點",[], "L6"),
+      toObj("いつも","經常、總是",[], "L6"),
+      toObj("ときどき","有時",[], "L6"),
+      toObj("それから","然後",[], "L6"),
+      toObj("ええ","是的",[], "L6"),
+      toObj("いいですね。","好啊。",[], "L6"),
+      toObj("わかりました。","我明白了。",[], "L6"),
+      toObj("なんですか。（何ですか。）","什麼事?",[], "L6"),
+      toObj("じゃ、また[あした]。","那麼,〔明天〕再見。",[], "L6"),
+    ];
+
+    // ---- L7
+    const L7 = [
+      toObj("きります（切ります）","切、剪",[], "L7"),
+      toObj("おくります（送ります）","寄、送",[], "L7"),
+      toObj("あげます","給",[], "L7"),
+      toObj("もらいます","得到",[], "L7"),
+      toObj("かします（貸します）","借給",[], "L7"),
+      toObj("かります（借ります）","借",[], "L7"),
+      toObj("おしえます（教えます）","教、告訴",[], "L7"),
+      toObj("ならいます（習います）","學習",[], "L7"),
+      toObj("かけます","打[電話]",[], "L7"),
+      toObj("て（手）","手",[], "L7"),
+      toObj("はし","筷子",[], "L7"),
+      toObj("スプーン","湯匙",[], "L7"),
+      toObj("ナイフ","刀子",[], "L7"),
+      toObj("フォーク","叉子",[], "L7"),
+      toObj("はさみ","剪刀",[], "L7"),
+      toObj("パソコン","個人電腦",[], "L7"),
+      toObj("ケータイ","手機",[], "L7"),
+      toObj("メール","電子郵件",[], "L7"),
+      toObj("ねんがじょう（年賀状）","賀年卡",[], "L7"),
+      toObj("パンチ","打洞機",[], "L7"),
+      toObj("ホッチキス","釘書機",[], "L7"),
+      toObj("セロテープ","透明膠帶",[], "L7"),
+      toObj("けしゴム（消しゴム）","橡皮擦",[], "L7"),
+      toObj("かみ（紙）","紙",[], "L7"),
+      toObj("はな（花）","花",[], "L7"),
+      toObj("シャツ","襯衫",[], "L7"),
+      toObj("プレゼント","禮物",[], "L7"),
+      toObj("にもつ（荷物）","行李、包裹",[], "L7"),
+      toObj("おかね（お金）","錢",[], "L7"),
+      toObj("きっぷ（切符）","車票、入場券",[], "L7"),
+      toObj("クリスマス","聖誕節",[], "L7"),
+      toObj("ちち（父）","家父",[], "L7"),
+      toObj("はは（母）","家母",[], "L7"),
+      toObj("おとうさん（お父さん）","（別人的/稱呼自己的）父親",[], "L7"),
+      toObj("おかあさん（お母さん）","（別人的/稱呼自己的）母親",[], "L7"),
+      toObj("もう","已經",[], "L7"),
+      toObj("まだ","尚未、還沒",[], "L7"),
+      toObj("これから","從現在起（要去做某事）",[], "L7"),
+      toObj("いらっしゃい。","歡迎。",[], "L7"),
+      toObj("どうぞおあがりください。（どうぞお上がりください。）","請進。",[], "L7"),
+      toObj("しつれいします。（失礼します。）","打擾了。",[], "L7"),
+      toObj("[〜は]いかがですか。","你覺得〔〜〕怎麼樣?",[], "L7"),
+      toObj("いただきます。","我開動了。",[], "L7"),
+      toObj("ごちそうさま[でした]。","我吃飽了／謝謝招待。",[], "L7"),
+      toObj("「〜、」すてきですね。","〔〜,〕真不錯啊!",[], "L7"),
+    ];
+
+    // ---- L8
+    const L8 = [
+      toObj("ハンサム","英俊",[], "L8"),
+      toObj("きれい","漂亮",[], "L8"),
+      toObj("しずか（静か[な]）","安靜",[], "L8"),
+      toObj("にぎやか","熱鬧",[], "L8"),
+      toObj("ゆうめい（有名[な]）","有名",[], "L8"),
+      toObj("しんせつ（親切[な]）","親切（不用於自己的親屬）",[], "L8"),
+      toObj("げんき（元気[な]）","健康",[], "L8"),
+      toObj("ひま（暇[な]）","有時間、有空",[], "L8"),
+      toObj("べんり（便利[な]）","方便",[], "L8"),
+      toObj("すてき","非常好",[], "L8"),
+      toObj("おおきい（大きい）","大",[], "L8"),
+      toObj("ちいさい（小さい）","小",[], "L8"),
+      toObj("あたらしい（新しい）","新、新鮮",[], "L8"),
+      toObj("ふるい（古い）","舊、不新鮮",[], "L8"),
+      toObj("いい（良い）","好",[], "L8"),
+      toObj("わるい（悪い）","壞",[], "L8"),
+      toObj("あつい（暑い、熱い）","熱",[], "L8"),
+      toObj("さむい（寒い）","冷",[], "L8"),
+      toObj("つめたい（冷たい）","冰、涼",[], "L8"),
+      toObj("むずかしい（難しい）","難",[], "L8"),
+      toObj("やさしい（易しい）","簡單",[], "L8"),
+      toObj("たかい（高い）","貴、高",[], "L8"),
+      toObj("やすい（安い）","便宜",[], "L8"),
+      toObj("ひくい（低い）","低、矮",[], "L8"),
+      toObj("おもしろい","有趣",[], "L8"),
+      toObj("おいしい","好吃",[], "L8"),
+      toObj("いそがしい（忙しい）","忙",[], "L8"),
+      toObj("たのしい（楽しい）","愉快、高興",[], "L8"),
+      toObj("しろい（白い）","白色",[], "L8"),
+      toObj("くろい（黒い）","黑色",[], "L8"),
+      toObj("あかい（赤い）","紅色",[], "L8"),
+      toObj("あおい（青い）","藍色",[], "L8"),
+      toObj("さくら（桜）","櫻花",[], "L8"),
+      toObj("やま（山）","山",[], "L8"),
+      toObj("まち（町）","市鎮、街道",[], "L8"),
+      toObj("たべもの（食べ物）","食物",[], "L8"),
+      toObj("ところ（所）","地方",[], "L8"),
+      toObj("りょう（寮）","宿舍",[], "L8"),
+      toObj("レストラン","餐廳",[], "L8"),
+      toObj("せいかつ（生活）","生活",[], "L8"),
+      toObj("[お]しごと（[お] 仕事）","工作（〜をします: 工作）",[], "L8"),
+      toObj("どう","怎麼樣",[], "L8"),
+      toObj("どんな","什麼樣的〜",[], "L8"),
+      toObj("とても","非常",[], "L8"),
+      toObj("あまり","不太〜（用於否定句）",[], "L8"),
+      toObj("そして","於是（連接句子）",[], "L8"),
+      toObj("〜が、〜","~但是〜",[], "L8"),
+    ];
+
+    const ALL = [...L5, ...L6, ...L7, ...L8];
+
+    // ========= State =========
+    let mode = "jp2zh";
+    let pool = [];
+    let totalQ = 10;
+    let qIndex = 0;
+    let score = 0;
+    let streak = 0, bestStreak = 0;
+    let timed = false;
+    let timeLeft = 60;
+    let timerId = null;
+    let wrongSet = [];
+    let starSet = new Set(JSON.parse(localStorage.getItem("minna_L5_8_stars")||"[]"));
+
+    const $ = (s, r=document)=>r.querySelector(s);
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+    function sample(arr, n){ const a = arr.slice(); shuffle(a); return a.slice(0, n); }
+
+    function renderBank(target, data){
+      target.innerHTML = "";
+      data.forEach(w=>{
+        const d = document.createElement("div");
+        d.className = "item";
+        const jk = (w.kanji && w.kana && w.kanji!==w.kana ? `${w.kana}（${w.kanji}）` : w.jp);
+        const btn = document.createElement("button");
+        btn.className = "starbtn";
+        btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆";
+        if(starSet.has(w.id)) btn.classList.add("star-on");
+        btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); };
+        const left = document.createElement("div");
+        left.innerHTML = `<div style="font-weight:900">${jk}</div><div>${w.zh}</div><div class="pill">${w.l}</div>`;
+        d.appendChild(left); d.appendChild(btn);
+        target.appendChild(d);
+      });
+    }
+    function toggleStar(id){
+      if(starSet.has(id)) starSet.delete(id); else starSet.add(id);
+      localStorage.setItem("minna_L5_8_stars", JSON.stringify([...starSet]));
+    }
+    renderBank(document.getElementById("bankL5"), L5);
+    renderBank(document.getElementById("bankL6"), L6);
+    renderBank(document.getElementById("bankL7"), L7);
+    renderBank(document.getElementById("bankL8"), L8);
+
+    document.querySelectorAll('[data-q]').forEach(btn=>{
+      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; });
+    });
+    document.getElementById("startBtn").addEventListener("click", startQuiz);
+    document.getElementById("speakBtn").addEventListener("click", speakPrompt);
+    document.getElementById("restart").addEventListener("click", ()=>{ document.getElementById("summary").style.display="none"; document.getElementById("setup").style.display="block" });
+    document.getElementById("retryWrong").addEventListener("click", retryWrongOnly);
+
+    function buildPool(){
+      const use5 = document.getElementById("useL5").checked;
+      const use6 = document.getElementById("useL6").checked;
+      const use7 = document.getElementById("useL7").checked;
+      const use8 = document.getElementById("useL8").checked;
+      const wantSuffix = document.getElementById("tagSuffix").checked;
+      const wantCountry = document.getElementById("tagCountry").checked;
+      const wantTime = document.getElementById("tagTime").checked;
+      const onlyStar = document.getElementById("onlyStar").checked;
+
+      let p = ALL.filter(w => (w.l==="L5" && use5) || (w.l==="L6" && use6) || (w.l==="L7" && use7) || (w.l==="L8" && use8));
+      if(wantSuffix || wantCountry || wantTime){
+        p = p.filter(w => {
+          const hasS = w.tags.includes(T.SUFFIX);
+          const hasC = w.tags.includes(T.COUNTRY);
+          const hasT = w.tags.includes(T.TIME);
+          return (wantSuffix&&hasS) || (wantCountry&&hasC) || (wantTime&&hasT);
+        });
+      }
+      if(onlyStar){ p = p.filter(w=> starSet.has(w.id)); }
+      const byLesson = document.getElementById("byLesson").checked;
+      if(byLesson){
+        const order = ["L5","L6","L7","L8"];
+        p.sort((a,b)=> order.indexOf(a.l) - order.indexOf(b.l));
+      }else{
+        shuffle(p);
+      }
+      return p;
+    }
+
+    function startTimer(){
+      if(!timed){ return; }
+      clearInterval(timerId);
+      document.getElementById("timeChip").style.display = "inline-block";
+      document.getElementById("timeLeft").textContent = timeLeft;
+      timerId = setInterval(()=>{
+        timeLeft--;
+        document.getElementById("timeLeft").textContent = timeLeft;
+        if(timeLeft<=0){ clearInterval(timerId); endQuiz(true); }
+      }, 1000);
+    }
+    function addBonusSeconds(n=3){
+      if(!timed) return;
+      timeLeft = Math.min(timeLeft + n, 999);
+      document.getElementById("timeLeft").textContent = timeLeft;
+      const t = document.createElement("span"); t.textContent = `+${n}s`; t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
+      const chip = document.getElementById("timeChip"); chip.appendChild(t); setTimeout(()=>t.remove(), 600);
+    }
+
+    function startQuiz(){
+      mode = document.querySelector('input[name="mode"]:checked').value;
+      pool = buildPool();
+      if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
+      timed = document.getElementById("timed").checked;
+      timeLeft = 60;
+      qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
+      document.getElementById("score").textContent = "0"; document.getElementById("streak").textContent = "0";
+      document.getElementById("setup").style.display="none";
+      document.getElementById("quiz").style.display="block";
+      document.getElementById("summary").style.display="none";
+      document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+      startTimer();
+      nextQuestion();
+    }
+
+    function nextQuestion(){
+      document.getElementById("resultBox").style.display="none";
+      document.getElementById("nextBtn").disabled = true;
+      if(qIndex >= totalQ){ endQuiz(); return; }
+      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
+      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%";
+
+      const q = pool[Math.floor(Math.random()*pool.length)];
+      let opts;
+      const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
+
+      if(mode==="kanji2kana"){
+        const prompt = q.kanji || q.jp;
+        const distractors = sample(ALL.filter(w=> w.kana!==q.kana), 2);
+        opts = shuffle([q, ...distractors]);
+        document.getElementById("qtext").innerHTML = prompt + " " + starBtnHTML;
+        renderChoices(opts.map(o=>o.kana), q.kana, q);
+        document.getElementById("choices").dataset.prompt = q.kana;
+      } else if(mode==="jp2zh"){
+        const distractors = sample(ALL.filter(w=> w.zh!==q.zh), 2);
+        opts = shuffle([q, ...distractors]);
+        document.getElementById("qtext").innerHTML = q.jp + " " + starBtnHTML;
+        renderChoices(opts.map(o=>o.zh), q.zh, q);
+        document.getElementById("choices").dataset.prompt = q.jp;
+      } else {
+        const distractors = sample(ALL.filter(w=> w.jp!==q.jp), 2);
+        opts = shuffle([q, ...distractors]);
+        document.getElementById("qtext").innerHTML = q.zh + " " + starBtnHTML;
+        renderChoices(opts.map(o=>o.jp), q.jp, q);
+        document.getElementById("choices").dataset.prompt = q.jp;
+      }
+
+      const starBtn = document.getElementById("starQBtn");
+      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
+
+      document.getElementById("nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+    }
+
+    function renderChoices(texts, correctText, qobj){
+      const choices = document.getElementById("choices"); choices.innerHTML="";
+      texts.forEach((txt, idx)=>{
+        const div = document.createElement("div");
+        div.className="choice";
+        div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
+        div.addEventListener("click", ()=>onChoose(txt, correctText, qobj));
+        choices.appendChild(div);
+      });
+    }
+    function onChoose(chosenText, correctText, q){
+      const ok = (chosenText === correctText);
+      const box = document.getElementById("resultBox");
+      const head = document.getElementById("resHead");
+      const body = document.getElementById("resBody");
+      if(ok){
+        score++; streak++; bestStreak = Math.max(bestStreak, streak);
+        document.getElementById("score").textContent = score; document.getElementById("streak").textContent = streak;
+        box.classList.remove("bad"); box.classList.add("ok");
+        head.textContent = "✅ 正確！";
+        if(timed) addBonusSeconds(3);
+      }else{
+        streak=0; document.getElementById("streak").textContent = streak;
+        box.classList.remove("ok"); box.classList.add("bad");
+        head.textContent = "❌ 答錯了";
+        wrongSet.push(q);
+      }
+      if(mode==="kanji2kana"){
+        body.textContent = `${q.kanji} → ${q.kana}｜${q.zh}`;
+      }else if(mode==="jp2zh"){
+        body.textContent = `${q.jp} → ${q.zh}`;
+      }else{
+        body.textContent = `${q.zh} → ${q.jp}`;
+      }
+      box.style.display="block";
+      document.getElementById("nextBtn").disabled = false;
+    }
+
+    function endQuiz(timeUp=false){
+      clearInterval(timerId); timerId=null;
+      document.getElementById("quiz").style.display="none";
+      document.getElementById("summary").style.display="block";
+      document.getElementById("finalScore").textContent = score;
+      document.getElementById("finalTotal").textContent = totalQ;
+      document.getElementById("finalStreak").textContent = bestStreak;
+      document.getElementById("bar").style.width = "100%";
+      document.getElementById("timeChip").style.display = "none";
+      const btn = document.getElementById("retryWrong");
+      btn.disabled = wrongSet.length===0;
+      if(timeUp){ alert("時間到！看看這回合成績～"); }
+    }
+    function retryWrongOnly(){
+      if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
+      const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
+      pool = [...map.values()];
+      // 保持原模式
+      timed = false;
+      qIndex=0; score=0; streak=0; bestStreak=0;
+      document.getElementById("score").textContent = "0";
+      document.getElementById("streak").textContent = "0";
+      document.getElementById("summary").style.display="none";
+      document.getElementById("quiz").style.display="block";
+      nextQuestion();
+    }
+
+    function speakPrompt(){
+      const utter = new SpeechSynthesisUtterance(document.getElementById("choices").dataset.prompt || "");
+      utter.lang = "ja-JP";
+      speechSynthesis.stop();
+      speechSynthesis.speak(utter);
+    }
+  </script>
+</body>
+</html>

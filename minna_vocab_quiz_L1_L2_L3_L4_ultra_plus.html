@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>大家的日本語 N5｜單字小考（L1–L4 ULTRA+）</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <style>
+    :root{ --bg1:#fff6dc; --bg2:#ffeec5; --paper:#fff7da; --ink:#1d1608; --accent:#d9983d; --accent-d:#b67a2f; --ok:#2e7d32; --bad:#c62828; --shadow:0 10px 20px rgba(0,0,0,.08); }
+    html,body{height:100%}
+    body{margin:0;font-family: ui-rounded,"SF Pro Rounded",-apple-system,system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial,sans-serif;color:var(--ink);
+      background: radial-gradient(120% 120% at 0% 0%, var(--bg1), var(--bg2)); background-attachment:fixed; -webkit-tap-highlight-color: transparent;}
+    .app{min-height:100dvh;display:flex;flex-direction:column}
+    header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:color-mix(in oklab,#fff 70%,transparent);backdrop-filter: blur(6px);border-bottom:1px dashed rgba(0,0,0,.08)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:14px;background:var(--paper);display:grid;place-items:center;font-weight:900;color:var(--accent);box-shadow:inset 0 0 0 2px rgba(0,0,0,.06)}
+    .title{font-weight:900;color:var(--accent)}
+    .hud{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .chip{background:var(--paper);padding:6px 10px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)}
+    main{flex:1;padding:14px;display:flex}
+    .card{margin:auto;width:min(1000px,100%);background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:var(--shadow);padding:16px 14px}
+    .section{display:flex;flex-direction:column;gap:12px}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:900;box-shadow:0 6px 0 var(--accent-d)}
+    .btn:active{transform:translateY(2px);box-shadow:0 4px 0 var(--accent-d)}
+    .ghost{background:#fff;color:var(--accent);box-shadow: inset 0 0 0 2px var(--accent)}
+    .pill{background:#fff;border:1px solid rgba(0,0,0,.08);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+    .title2{font-weight:900;color:#5f430e}
+    .qtext{display:flex;align-items:center;gap:10px;font-size:1.6rem;font-weight:900;line-height:1.6;word-break:keep-all}
+    .starbtn{border:0;background:transparent;font-size:1.4rem;cursor:pointer}
+    .star-on{color:#f4b400;filter:drop-shadow(0 1px 0 rgba(0,0,0,.2))}
+    .choices{display:grid;grid-template-columns:1fr;gap:10px}
+    .choice{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 12px;font-size:1.1rem;font-weight:800;box-shadow:var(--shadow)}
+    .choice:active{transform:scale(.99)}
+    .key{min-width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--paper);color:var(--accent);border:1px solid rgba(0,0,0,.06)}
+    .result{margin-top:10px;padding:10px;border-radius:12px;border:2px dashed rgba(0,0,0,.12);display:none}
+    .result.ok{border-color: color-mix(in oklab, var(--ok) 40%, transparent)}
+    .result.bad{border-color: color-mix(in oklab, var(--bad) 40%, transparent)}
+    footer{position:sticky;bottom:0;z-index:10;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in oklab,#fff 70%,transparent);backdrop-filter: blur(6px);border-top:1px dashed rgba(0,0,0,.08)}
+    .meter{flex:1;display:flex;gap:10px;align-items:center}
+    .progress{height:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:999px;overflow:hidden;flex:1}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,#d9983d,#f7c66d)}
+    .export{display:flex;gap:8px;flex-wrap:wrap}
+    .hint{opacity:.85;font-size:.95rem}
+    .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+    .item{background:var(--paper);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">単</div>
+        <div class="title">大家的日本語 N5｜單字小考（L1–L4 ULTRA+）</div>
+      </div>
+      <div class="hud">
+        <div class="chip">分數 <span id="score">0</span></div>
+        <div class="chip">連對 <span id="streak">0</span></div>
+        <div class="chip" id="timeChip" style="display:none">⏱ <span id="timeLeft">60</span>s</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="card section" id="setup">
+        <div class="title2">選擇模式</div>
+        <div class="grid">
+          <label class="row"><input type="radio" name="mode" value="jp2zh" checked> <span class="pill">看到日文 → 選中文</span></label>
+          <label class="row"><input type="radio" name="mode" value="zh2jp"> <span class="pill">看到中文 → 選日文</span></label>
+          <label class="row"><input type="radio" name="mode" value="kanji2kana"> <span class="pill">讀音模式：漢字 → 假名</span></label>
+        </div>
+
+        <div class="title2">範圍</div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="l1" checked> L1</label>
+          <label class="pill"><input type="checkbox" id="l2" checked> L2</label>
+          <label class="pill"><input type="checkbox" id="l3" checked> L3</label>
+          <label class="pill"><input type="checkbox" id="l4" checked> L4</label>
+        </div>
+
+        <div class="title2">標籤篩選</div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="tagSuffix"> 接尾詞（〜さん／〜ちゃん／〜じん）</label>
+          <label class="pill"><input type="checkbox" id="tagCountry"> 國家</label>
+          <label class="pill"><input type="checkbox" id="tagTime"> 只練「時間類」</label>
+          <span class="hint">（勾選多個＝取聯集）</span>
+        </div>
+
+        <div class="title2">出題來源</div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="onlyStar"> 只出 ⭐️ 星號單字</label>
+          <span class="hint">（星號會存在你的瀏覽器，之後打開也還在）</span>
+        </div>
+
+        <div class="title2">題數 & 限時</div>
+        <div class="row">
+          <button class="pill" data-q="10">10 題</button>
+          <button class="pill" data-q="20">20 題</button>
+          <span id="qcount" class="pill">目前：10 題</span>
+        </div>
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
+        </div>
+
+        <div class="title2">匯出</div>
+        <div class="export">
+          <button class="ghost" id="expCurrent">匯出當前範圍 → Anki CSV</button>
+          <button class="ghost" id="expStar">匯出星號單字 → Anki CSV</button>
+          <span class="hint">欄位：Front（JP/漢字）、Reading（かな）、Back（中文）、Lesson、Tags</span>
+        </div>
+
+        <details>
+          <summary>題庫一覽（可直接加星）</summary>
+          <div class="title2" style="margin-top:6px">L1</div>
+          <div class="list" id="bankL1"></div>
+          <div class="title2" style="margin-top:10px">L2</div>
+          <div class="list" id="bankL2"></div>
+          <div class="title2" style="margin-top:10px">L3</div>
+          <div class="list" id="bankL3"></div>
+          <div class="title2" style="margin-top:10px">L4</div>
+          <div class="list" id="bankL4"></div>
+        </details>
+
+        <div class="row"><button class="btn" id="startBtn">開始測驗 ▶</button></div>
+      </section>
+
+      <section class="card section" id="quiz" style="display:none">
+        <div class="row"><span class="pill" id="meta">第 1 / 10 題</span><span class="pill" id="modeTag">JP→ZH</span></div>
+        <div class="qtext" id="qtext">問題</div>
+        <div class="choices" id="choices"></div>
+        <div class="result" id="resultBox">
+          <div id="resHead" style="font-weight:900;margin-bottom:4px"></div>
+          <div id="resBody"></div>
+        </div>
+        <div class="row">
+          <button class="btn" id="nextBtn" disabled>下一題 →</button>
+          <button class="ghost" id="speakBtn">朗讀</button>
+        </div>
+      </section>
+
+      <section class="card section" id="summary" style="display:none">
+        <div class="title2">完成！</div>
+        <div>分數：<b id="finalScore">0</b> ／ 題數：<b id="finalTotal">0</b></div>
+        <div>最佳連對：<b id="finalStreak">0</b></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="retryWrong" disabled>錯題重練 ▶</button>
+          <button class="ghost" id="restart">回到設定頁</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="meter">
+        <span class="pill">進度</span>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const T = { SUFFIX:"接尾詞", COUNTRY:"國家", TIME:"時間" };
+    function parseKanjiKanaFlexible(jp){
+      let m = jp.match(/^(.*)（(.*)）$/);
+      if(m){ return {kana:m[1], kanji:m[2]} }
+      m = jp.match(/^(.*)\((.*)\)$/);
+      if(m){ return {kana:m[1], kanji:m[2]} }
+      return {kana:jp, kanji:jp};
+    }
+
+    // ---- L1 & L2 (原資料同前) ----
+    const L1_RAW = [
+      ["わたし","我",[]],["あなた","你、您",[]],["あのひと（あの人）","他、她、那個人",[]],["あのかた（あの方）","「あの人」的禮貌說法",[]],
+      ["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜ちゃん","代替「〜さん」，接在小孩子名字後（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
+      ["せんせい（先生）","老師",[]],["きょうし（教師）","教師",[]],["がくせい（学生）","學生",[]],["かいしゃいん（会社員）","公司職員",[]],["しゃいん（社員）","公司職員",[]],
+      ["ぎんこういん（銀行員）","銀行行員",[]],["いしゃ（医者）","醫生",[]],["けんきゅうしゃ（研究者）","研究人員",[]],["だいがく（大学）","大學",[]],["びょういん（病院）","醫院",[]],
+      ["だれ（誰）","誰（哪位）",[]],["どなた","「だれ」的禮貌說法",[]],["〜さい（〜歳）","〜歲",[]],["なんさい（何歳）","幾歲",[]],["おいくつ","「なんさい」的禮貌說法",[]],
+      ["はい","是、對",[]],["いいえ","不、不是",[]],["はじめまして。","初次見面。",[]],["〜からきました。","從〜來的。",[]],["どうぞよろしくおねがいします。","請多關照／請多指教。",[]],
+      ["しつれいですが（失礼ですが）","抱歉，請問…",[]],["おなまえは？（お名前は？）","您貴姓？您叫什麼名字？",[]],["こちらは〜さんです。","這位是〜。",[]],
+      ["アメリカ","美國",[T.COUNTRY]],["イギリス","英國",[T.COUNTRY]],["インド","印度",[T.COUNTRY]],["インドネシア","印尼",[T.COUNTRY]],["かんこく（韓国）","韓國",[T.COUNTRY]],
+      ["タイ","泰國",[T.COUNTRY]],["ちゅうごく（中国）","中國",[T.COUNTRY]],["ドイツ","德國",[T.COUNTRY]],["にほん（日本）","日本",[T.COUNTRY]],["ブラジル","巴西",[T.COUNTRY]]
+    ];
+    const L2_RAW = [
+      ["これ","這(離說話者近的東西)",[]],["それ","那(離聽者近的東西)",[]],["あれ","那(離說話者、聽者都遠的東西)",[]],["この〜","這個~",[]],["その〜","那個~（近對方）",[]],["あの〜","那個~（遠）",[]],
+      ["ほん（本）","書",[]],["じしょ（辞書）","字典",[]],["ざっし（雑誌）","雜誌",[]],["しんぶん（新聞）","報紙",[]],["ノート","筆記本",[]],["てちょう（手帳）","記事本",[]],["めいし（名刺）","名片",[]],
+      ["カード","卡片",[]],["えんぴつ（鉛筆）","鉛筆",[]],["ボールペン","原子筆",[]],["シャープペンシル","自動鉛筆",[]],["かぎ","鑰匙",[]],["とけい（時計）","鐘錶",[]],["かさ（傘）","傘",[]],
+      ["かばん","皮包、提包",[]],["シーディー（CD）","CD、光碟",[]],["テレビ","電視",[]],["ラジオ","收音機",[]],["カメラ","照相機",[]],["コンピューター","電腦",[]],["くるま（車）","汽車",[]],
+      ["つくえ（机）","桌子",[]],["いす","椅子",[]],["チョコレート","巧克力",[]],["コーヒー","咖啡",[]],["[お]みやげ","伴手禮、土產",[]],["えいご（英語）","英語",[]],
+      ["にほんご（日本語）","日語",[]],["〜ご（〜語）","〜語",[]],["なん（何）","什麼",[]],["そうです","是的",[]],["これからお世話になります。","今後將承蒙您的照顧。",[]],
+      ["こちらこそ[どうぞ]よろしく[お願いします]。","哪裡哪裡，也請您多多指教。",[]],["あのう","那個⋯（客氣、躊躇地搭話）",[]],["えっ。","咦⋯（聽到意外消息時）",[]],["どうぞ。","請。（勸對方做某事）",[]],
+      ["[どうも]ありがとう[ございます]。","謝謝。",[]],["そうですか。","這樣啊",[]],["ちがいます（違います）。","不是。",[]],["あ","啊（意識到什麼時）",[]]
+    ];
+
+    // ---- L3 ----
+    const L3_RAW = [
+      ["ここ","這裡(離說話人近的場所)",[]],["そこ","那裡(離聽話人近的場所)",[]],["あそこ","那裡(離說話人、聽話人都遠的場所)",[]],["どこ","哪裡",[]],
+      ["こちら","這邊(「ここ」的禮貌用語)",[]],["そちら","那邊(「そこ」的禮貌用語)",[]],["あちら","那邊(「あそこ」的禮貌用語)",[]],["どちら","哪邊「どこ」的禮貌用語)",[]],
+      ["きょうしつ（教室）","教室",[]],["しょくどう（食堂）","食堂、餐廳",[]],["じむしょ（事務所）","辦事處、事務所",[]],["かいぎしつ（会議室）","會議室",[]],["うけつけ（受付）","接待處、服務台",[]],
+      ["ロビー","大廳、休息室",[]],["へや（部屋）","房間",[]],["トイレ(おてあらい)（(お手洗い)）","廁所(洗手間)",[]],["かいだん（階段）","樓梯",[]],["エレベーター","電梯",[]],
+      ["エスカレーター","電扶梯",[]],["じどうはんばいき（自動販売機）","自動販賣機",[]],["でんわ（電話）","電話",[]],["[お]くに（[お]国）","國家、故鄉",[T.COUNTRY]],["かいしゃ（会社）","公司",[]],
+      ["うち","家",[]],["くつ（靴）","鞋子",[]],["ネクタイ","領帶",[]],["ワイン","葡萄酒",[]],["うりば（売り場）","賣場、專櫃",[]],["ちか（地下）","地下",[]],
+      ["⋯かい/がい（⋯階）","...樓",[]],["なんがい（何階）","幾樓",[]],["⋯えん（⋯円）","...日圓",[]],["いくら","多少錢",[]],["ひゃく（百）","百",[]],["せん（千）","千",[]],["まん（万）","萬",[]],
+      ["いらっしゃいませ。","歡迎光臨（招呼客人）",[]],["[〜を]みせてください。 （[〜を]見せてください。）","請讓我看一下（〜）。",[]],["じゃ","那麼",[]],
+      ["「〜を]ください。","請給我（〜）。",[]],["すみません。","對不起／抱歉。",[]],["どうも。","謝謝。",[]],["イタリア","義大利",[T.COUNTRY]],["スイス","瑞士",[T.COUNTRY]],
+      ["フランス","法國",[T.COUNTRY]],["ジャカルタ","雅加達",[]],["バンコク","曼谷",[]],["ベルリン","柏林",[]],["しんおおさか（新大阪）","新大阪（大阪的車站名）",[]]
+    ];
+
+    // ---- L4 with TIME tags ----
+    const L4_RAW = [
+      ["おきます（起きます）","起床",[]],["ねます（寝ます）","睡覺",[]],["はたらきます（働きます）","工作",[]],["やすみます（休みます）","休息",[]],
+      ["べんきょうします（勉強します）","念書",[]],["おわります（終わります）","結束",[]],
+      ["デパート","百貨公司",[]],["ぎんこう（銀行）","銀行",[]],["ゆうびんきょく（郵便局）","郵局",[]],["としょかん（図書館）","圖書館",[]],["びじゅつかん（美術館）","美術館",[]],
+      ["いま（今）","現在",[T.TIME]],["⋯じ（…時）","...點",[T.TIME]],["⋯ふん（⋯ぷん）（…分）","...分",[T.TIME]],["はん（半）","半",[T.TIME]],["なんじ（何時）","幾點",[T.TIME]],["なんぷん（何分）","幾分",[T.TIME]],
+      ["ごぜん（午前）","上午",[T.TIME]],["ごご（午後）","下午",[T.TIME]],["あさ（朝）","早上",[T.TIME]],["ひる（昼）","白天",[T.TIME]],["ばん（晩）","晚上",[T.TIME]],["よる（夜）","晚上",[T.TIME]],
+      ["おととい","前天",[T.TIME]],["きのう","昨天",[T.TIME]],["きょう","今天",[T.TIME]],["あした","明天",[T.TIME]],["あさって","後天",[T.TIME]],
+      ["けさ","今天早上",[T.TIME]],["こんばん（今晩）","今晚",[T.TIME]],["やすみ（休み）","休息、休假",[]],
+      ["ひるやすみ（昼休み）","午休",[T.TIME]],["しけん（試験）","考試",[]],["かいぎ（会議）","會議",[]],["えいが（映画）","電影",[]],
+      ["まいあさ（毎朝）","每天早上",[T.TIME]],["まいばん（毎晩）","每天晚上",[T.TIME]],["まいにち（毎日）","每天",[T.TIME]],
+      ["げつようび（月曜日）","星期一",[T.TIME]],["かようび（火曜日）","星期二",[T.TIME]],["すいようび（水曜日）","星期三",[T.TIME]],["もくようび（木曜日）","星期四",[T.TIME]],
+      ["きんようび（金曜日）","星期五",[T.TIME]],["どようび（土曜日）","星期六",[T.TIME]],["にちようび（日曜日）","星期天",[T.TIME]],["なんようび（何曜日）","星期幾",[T.TIME]],
+      ["〜から","從〜",[T.TIME]],["〜まで","到〜",[T.TIME]],["〜と〜","〜和〜",[]],
+      ["ばんごう（番号）","號碼",[]],["なんばん（何番）","幾號",[]],["そちら","那邊、您那邊",[]],["たいへんですね。（大変ですね。）","真是辛苦啊。",[]],
+      ["ニューヨーク","紐約",[T.COUNTRY]],["ペキン","北京",[T.COUNTRY]],["ロサンゼルス","洛杉磯",[T.COUNTRY]],["ロンドン","倫敦",[T.COUNTRY]]
+    ];
+
+    function toObj([jp, zh, tags], l){
+      const {kana, kanji} = parseKanjiKanaFlexible(jp);
+      const normalizedTags = (tags||[]);
+      return {id:jp, jp, zh, kana, kanji, l, tags: normalizedTags};
+    }
+    const L1 = L1_RAW.map(x=>toObj(x,"L1"));
+    const L2 = L2_RAW.map(x=>toObj(x,"L2"));
+    const L3 = L3_RAW.map(x=>toObj(x,"L3"));
+    const L4 = L4_RAW.map(x=>toObj(x,"L4"));
+    const ALL = [...L1, ...L2, ...L3, ...L4];
+
+    // ========= State =========
+    let mode = "jp2zh";
+    let pool = [];
+    let totalQ = 10;
+    let qIndex = 0;
+    let score = 0;
+    let streak = 0, bestStreak = 0;
+    let timed = false;
+    let timeLeft = 60;
+    let timerId = null;
+    let wrongSet = [];
+    let starSet = new Set(JSON.parse(localStorage.getItem("minna_stars")||"[]"));
+
+    const $ = (s, r=document)=>r.querySelector(s);
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+    function sample(arr, n){ const a = arr.slice(); shuffle(a); return a.slice(0, n); }
+
+    function renderBank(target, data){
+      target.innerHTML = "";
+      data.forEach(w=>{
+        const d = document.createElement("div");
+        d.className = "item";
+        const jk = (w.kanji && w.kana && w.kanji!==w.kana ? `${w.kana}（${w.kanji}）` : w.jp);
+        const btn = document.createElement("button");
+        btn.className = "starbtn";
+        btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆";
+        if(starSet.has(w.id)) btn.classList.add("star-on");
+        btn.title = "加到星號";
+        btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); };
+        const left = document.createElement("div");
+        left.innerHTML = `<div style="font-weight:900">${jk}</div><div>${w.zh}</div><div class="pill">${w.l}${w.tags.length? "｜"+w.tags.join("・"):""}</div>`;
+        d.appendChild(left); d.appendChild(btn);
+        target.appendChild(d);
+      });
+    }
+    function toggleStar(id){
+      if(starSet.has(id)) starSet.delete(id); else starSet.add(id);
+      localStorage.setItem("minna_stars", JSON.stringify([...starSet]));
+    }
+
+    renderBank(document.getElementById("bankL1"), L1);
+    renderBank(document.getElementById("bankL2"), L2);
+    renderBank(document.getElementById("bankL3"), L3);
+    renderBank(document.getElementById("bankL4"), L4);
+
+    document.querySelectorAll('[data-q]').forEach(btn=>{
+      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); $("#qcount").textContent = "目前：" + totalQ + " 題"; });
+    });
+    $("#startBtn").addEventListener("click", startQuiz);
+    $("#speakBtn").addEventListener("click", speakPrompt);
+    $("#restart").addEventListener("click", ()=>{ $("#summary").style.display="none"; $("#setup").style.display="block" });
+    $("#retryWrong").addEventListener("click", retryWrongOnly);
+
+    // === CSV Export ===
+    $("#expCurrent").addEventListener("click", ()=>{
+      const arr = buildPool(); // current filters
+      exportAnkiCSV(arr, "anki_current_scope.csv");
+    });
+    $("#expStar").addEventListener("click", ()=>{
+      const arr = ALL.filter(w=>starSet.has(w.id));
+      exportAnkiCSV(arr, "anki_starred.csv");
+    });
+
+    function sanitizeCSV(s){
+      if(s==null) return "";
+      const str = (""+s).replaceAll('"','""');
+      return `"${str}"`;
+    }
+    function exportAnkiCSV(items, filename){
+      if(!items.length){ alert("沒有可匯出的單字。請檢查範圍或星號設定！"); return; }
+      const header = ["Front(JP/漢字)","Reading(かな)","Back(中文)","Lesson","Tags"].map(sanitizeCSV).join(",") + "\\n";
+      const rows = items.map(w=>[w.kanji||w.jp, w.kana||w.jp, w.zh, w.l, w.tags.join(" ")].map(sanitizeCSV).join(",")).join("\\n");
+      const csv = header + rows;
+      const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function buildPool(){
+      const useL1 = $("#l1").checked, useL2 = $("#l2").checked, useL3 = $("#l3").checked, useL4 = $("#l4").checked;
+      const wantSuffix = $("#tagSuffix").checked, wantCountry = $("#tagCountry").checked, wantTime = $("#tagTime").checked;
+      const onlyStar = $("#onlyStar").checked;
+
+      let p = ALL.filter(w => (w.l==="L1" && useL1) || (w.l==="L2" && useL2) || (w.l==="L3" && useL3) || (w.l==="L4" && useL4));
+
+      if(wantSuffix || wantCountry || wantTime){
+        p = p.filter(w => {
+          const hasS = w.tags.includes(T.SUFFIX);
+          const hasC = w.tags.includes(T.COUNTRY);
+          const hasT = w.tags.includes(T.TIME);
+          return (wantSuffix && hasS) || (wantCountry && hasC) || (wantTime && hasT);
+        });
+      }
+      if(onlyStar){
+        p = p.filter(w => starSet.has(w.id));
+      }
+      return p;
+    }
+
+    function startTimer(){
+      if(!timed){ return; }
+      clearInterval(timerId);
+      $("#timeChip").style.display = "inline-block";
+      $("#timeLeft").textContent = timeLeft;
+      timerId = setInterval(()=>{
+        timeLeft--;
+        $("#timeLeft").textContent = timeLeft;
+        if(timeLeft<=0){ clearInterval(timerId); endQuiz(true); }
+      }, 1000);
+    }
+    function addBonusSeconds(n=3){
+      if(!timed) return;
+      timeLeft = Math.min(timeLeft + n, 999);
+      $("#timeLeft").textContent = timeLeft;
+      const t = document.createElement("span");
+      t.textContent = `+${n}s`;
+      t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
+      const chip = $("#timeChip"); chip.appendChild(t);
+      setTimeout(()=>t.remove(), 600);
+    }
+
+    function startQuiz(){
+      mode = document.querySelector('input[name="mode"]:checked').value;
+      pool = buildPool();
+      if(pool.length < 3){ alert("題庫過小：請勾選至少一課，或取消過度的標籤／星號篩選。"); return; }
+      timed = $("#timed").checked;
+      timeLeft = 60;
+
+      qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
+      $("#score").textContent = "0"; $("#streak").textContent = "0";
+      $("#setup").style.display="none";
+      $("#quiz").style.display="block";
+      $("#summary").style.display="none";
+      $("#modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+      startTimer();
+      nextQuestion();
+    }
+
+    function nextQuestion(){
+      $("#resultBox").style.display="none";
+      $("#nextBtn").disabled = true;
+      if(qIndex >= totalQ){ endQuiz(); return; }
+      $("#meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
+      $("#bar").style.width = ((qIndex)/totalQ)*100 + "%";
+
+      const q = pool[Math.floor(Math.random()*pool.length)];
+      let opts;
+      const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
+
+      if(mode==="kanji2kana"){
+        const prompt = q.kanji || q.jp;
+        const distractors = sample(pool.filter(w=> w.kana!==q.kana), 2);
+        opts = shuffle([q, ...distractors]);
+        $("#qtext").innerHTML = `${prompt} ${starBtnHTML}`;
+        renderChoices(opts.map(o=>o.kana), q.kana, q);
+        $("#choices").dataset.prompt = q.kana;
+      } else if(mode==="jp2zh"){
+        const distractors = sample(pool.filter(w=> w.zh!==q.zh), 2);
+        opts = shuffle([q, ...distractors]);
+        $("#qtext").innerHTML = `${q.jp} ${starBtnHTML}`;
+        renderChoices(opts.map(o=>o.zh), q.zh, q);
+        $("#choices").dataset.prompt = q.jp;
+      } else {
+        const distractors = sample(pool.filter(w=> w.jp!==q.jp), 2);
+        opts = shuffle([q, ...distractors]);
+        $("#qtext").innerHTML = `${q.zh} ${starBtnHTML}`;
+        renderChoices(opts.map(o=>o.jp), q.jp, q);
+        $("#choices").dataset.prompt = q.jp;
+      }
+
+      const starBtn = document.getElementById("starQBtn");
+      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
+    }
+
+    function renderChoices(texts, correctText, qobj){
+      const choices = $("#choices"); choices.innerHTML="";
+      texts.forEach((txt, idx)=>{
+        const div = document.createElement("div");
+        div.className="choice";
+        div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
+        div.addEventListener("click", ()=>onChoose(txt, correctText, qobj));
+        choices.appendChild(div);
+      });
+    }
+
+    function onChoose(chosenText, correctText, q){
+      const ok = (chosenText === correctText);
+      const box = $("#resultBox");
+      const head = $("#resHead");
+      const body = $("#resBody");
+      if(ok){
+        score++; streak++; bestStreak = Math.max(bestStreak, streak);
+        $("#score").textContent = score; $("#streak").textContent = streak;
+        box.classList.remove("bad"); box.classList.add("ok");
+        head.textContent = "✅ 正確！";
+        if(timed) addBonusSeconds(3);
+      }else{
+        streak=0; $("#streak").textContent = streak;
+        box.classList.remove("ok"); box.classList.add("bad");
+        head.textContent = "❌ 答錯了";
+        wrongSet.push(q);
+      }
+
+      if(mode==="kanji2kana"){
+        body.textContent = `${q.kanji} → ${q.kana}｜${q.zh}`;
+      }else if(mode==="jp2zh"){
+        body.textContent = `${q.jp} → ${q.zh}`;
+      }else{
+        body.textContent = `${q.zh} → ${q.jp}`;
+      }
+
+      box.style.display="block";
+      $("#nextBtn").disabled = false;
+      $("#nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+    }
+
+    function endQuiz(timeUp=false){
+      clearInterval(timerId); timerId=null;
+      $("#quiz").style.display="none";
+      $("#summary").style.display="block";
+      document.getElementById("finalScore").textContent = score;
+      document.getElementById("finalTotal").textContent = totalQ;
+      document.getElementById("finalStreak").textContent = bestStreak;
+      document.getElementById("bar").style.width = "100%";
+      $("#timeChip").style.display = "none";
+      const btn = document.getElementById("retryWrong");
+      btn.disabled = wrongSet.length===0;
+      if(timeUp){ alert("時間到！看看這回合成績～"); }
+    }
+
+    function retryWrongOnly(){
+      if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
+      const map = new Map();
+      wrongSet.forEach(w=>map.set(w.id,w));
+      pool = [...map.values()];
+      mode = document.querySelector('input[name="mode"]:checked').value;
+      timed = false;
+      qIndex=0; score=0; streak=0; bestStreak=0;
+      document.getElementById("score").textContent = "0";
+      document.getElementById("streak").textContent = "0";
+      document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+      document.getElementById("summary").style.display="none";
+      document.getElementById("quiz").style.display="block";
+      nextQuestion();
+    }
+
+    function speakPrompt(){
+      const utter = new SpeechSynthesisUtterance(document.getElementById("choices").dataset.prompt || "");
+      utter.lang = "ja-JP";
+      speechSynthesis.stop();
+      speechSynthesis.speak(utter);
+    }
+
+    document.addEventListener("keydown", (e)=>{
+      const map = { "a":0, "b":1, "c":2 };
+      if(map[e.key?.toLowerCase()]!=null){
+        const idx = map[e.key.toLowerCase()];
+        const node = document.querySelectorAll("#choices .choice")[idx];
+        if(node) node.click();
+      }
+    });
+  </script>
+</body>
+</html>
