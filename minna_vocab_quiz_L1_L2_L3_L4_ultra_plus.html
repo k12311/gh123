@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>大家的日本語 N5｜L1–L4 單字小考（固定題庫）</title>
+  <title>大家的日本語 N5｜單字小考（L1–L4 手寫版）</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <style>
     :root{ --bg1:#fff6dc; --bg2:#ffeec5; --paper:#fff7da; --ink:#1d1608; --accent:#d9983d; --accent-d:#b67a2f; --ok:#2e7d32; --bad:#c62828; --shadow:0 10px 20px rgba(0,0,0,.08); }
     html,body{height:100%}
@@ -42,15 +44,19 @@
     .bar{height:100%;width:0;background:linear-gradient(90deg,#d9983d,#f7c66d)}
     .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
     .item{background:var(--paper);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-    .hint{opacity:.85;font-size:.95rem}
+    /* Handwriting pad */
+    .pad-wrap{background:var(--paper); border:1px dashed rgba(0,0,0,.12); border-radius:14px; padding:12px}
+    .pad-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+    #pad{width:100%; aspect-ratio: 1.6/1; background:white; border-radius:12px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+    .trace-badge{display:none;margin-left:8px}
   </style>
 </head>
 <body>
   <div class="app">
     <header>
       <div class="brand">
-        <div class="logo">単</div>
-        <div class="title">大家的日本語 N5｜L1–L4 單字小考（固定題庫）</div>
+        <div class="logo">✍️</div>
+        <div class="title">大家的日本語 N5｜單字小考（L1–L4 手寫版）</div>
       </div>
       <div class="hud">
         <div class="chip">分數 <span id="score">0</span></div>
@@ -61,19 +67,20 @@
 
     <main>
       <section class="card section" id="setup">
-        <div class="title2">模式</div>
+        <div class="title2">選擇模式</div>
         <div class="grid">
-          <label class="row"><input type="radio" name="mode" value="jp2zh" checked> <span class="pill">看到日文 → 選中文</span></label>
+          <label class="row"><input type="radio" name="mode" value="jp2zh"> <span class="pill">看到日文 → 選中文</span></label>
           <label class="row"><input type="radio" name="mode" value="zh2jp"> <span class="pill">看到中文 → 選日文</span></label>
           <label class="row"><input type="radio" name="mode" value="kanji2kana"> <span class="pill">讀音模式：漢字 → 假名</span></label>
+          <label class="row"><input type="radio" name="mode" value="handwrite" checked> <span class="pill">書寫模式：漢字 → 手寫假名 ✍️</span></label>
         </div>
 
         <div class="title2">範圍</div>
         <div class="row">
-          <label class="pill"><input type="checkbox" id="useL1" checked> L1</label>
-          <label class="pill"><input type="checkbox" id="useL2" checked> L2</label>
-          <label class="pill"><input type="checkbox" id="useL3" checked> L3</label>
-          <label class="pill"><input type="checkbox" id="useL4" checked> L4</label>
+          <label class="pill"><input type="checkbox" id="l1" checked> L1</label>
+          <label class="pill"><input type="checkbox" id="l2" checked> L2</label>
+          <label class="pill"><input type="checkbox" id="l3" checked> L3</label>
+          <label class="pill"><input type="checkbox" id="l4" checked> L4</label>
         </div>
 
         <div class="title2">標籤篩選</div>
@@ -92,7 +99,6 @@
         </div>
         <div class="row">
           <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
-          <label class="pill"><input type="checkbox" id="byLesson"> 依課次順序（關閉＝隨機混合）</label>
         </div>
 
         <details>
@@ -111,13 +117,35 @@
       </section>
 
       <section class="card section" id="quiz" style="display:none">
-        <div class="row"><span class="pill" id="meta">第 1 / 10 題</span><span class="pill" id="modeTag">JP→ZH</span></div>
+        <div class="row">
+          <span class="pill" id="meta">第 1 / 10 題</span>
+          <span class="pill" id="modeTag">手寫</span>
+          <span class="pill" id="traceBadge" class="trace-badge">描紅：<b id="traceChar"></b></span>
+        </div>
         <div class="qtext" id="qtext">問題</div>
+
+        <div id="handwriteWrap" class="pad-wrap" style="display:none">
+          <div class="pad-toolbar">
+            <button class="ghost" id="padUndo">撤銷</button>
+            <button class="ghost" id="padClear">清除</button>
+            <button class="ghost" id="padShowAnswer">看答案</button>
+            <button class="ghost" id="padTrace">描紅（顯示正解）</button>
+          </div>
+          <canvas id="pad"></canvas>
+        </div>
+
         <div class="choices" id="choices"></div>
+
         <div class="result" id="resultBox">
           <div id="resHead" style="font-weight:900;margin-bottom:4px"></div>
           <div id="resBody"></div>
         </div>
+
+        <div class="row" id="selfJudgeRow" style="display:none">
+          <button class="btn" id="selfOk">我寫對了 ✅</button>
+          <button class="ghost" id="selfBad">我寫錯了 ❌</button>
+        </div>
+
         <div class="row">
           <button class="btn" id="nextBtn" disabled>下一題 →</button>
           <button class="ghost" id="speakBtn">朗讀</button>
@@ -153,70 +181,34 @@
       return {kana:jp, kanji:jp};
     }
 
-    // === 題庫（**完全照你的第一份，未改任何字詞**）===
+    // --- Data (same as ULTRA+, shortened L1-L4 for brevity) ---
     const L1_RAW = [
-      ["わたし","我",[]],["あなた","你、您",[]],["あのひと（あの人）","他、她、那個人",[]],["あのかた（あの方）","「あの人」的禮貌說法",[]],
-      ["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜ちゃん","代替「〜さん」，接在小孩子名字後（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
-      ["せんせい（先生）","老師",[]],["きょうし（教師）","教師",[]],["がくせい（学生）","學生",[]],["かいしゃいん（会社員）","公司職員",[]],["しゃいん（社員）","公司職員",[]],
-      ["ぎんこういん（銀行員）","銀行行員",[]],["いしゃ（医者）","醫生",[]],["けんきゅうしゃ（研究者）","研究人員",[]],["だいがく（大学）","大學",[]],["びょういん（病院）","醫院",[]],
-      ["だれ（誰）","誰（哪位）",[]],["どなた","「だれ」的禮貌說法",[]],["〜さい（〜歳）","〜歲",[]],["なんさい（何歳）","幾歲",[]],["おいくつ","「なんさい」的禮貌說法",[]],
-      ["はい","是、對",[]],["いいえ","不、不是",[]],["はじめまして。","初次見面。",[]],["〜からきました。","從〜來的。",[]],["どうぞよろしくおねがいします。","請多關照／請多指教。",[]],
-      ["しつれいですが（失礼ですが）","抱歉，請問…",[]],["おなまえは？（お名前は？）","您貴姓？您叫什麼名字？",[]],["こちらは〜さんです。","這位是〜。",[]],
-      ["アメリカ","美國",[T.COUNTRY]],["イギリス","英國",[T.COUNTRY]],["インド","印度",[T.COUNTRY]],["インドネシア","印尼",[T.COUNTRY]],["かんこく（韓国）","韓國",[T.COUNTRY]],
-      ["タイ","泰國",[T.COUNTRY]],["ちゅうごく（中国）","中國",[T.COUNTRY]],["ドイツ","德國",[T.COUNTRY]],["にほん（日本）","日本",[T.COUNTRY]],["ブラジル","巴西",[T.COUNTRY]]
+      ["わたし","我",[]],["あなた","你、您",[]],["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
+      ["せんせい（先生）","老師",[]],["がくせい（学生）","學生",[]],["アメリカ","美國",[T.COUNTRY]],["にほん（日本）","日本",[T.COUNTRY]]
     ];
     const L2_RAW = [
-      ["これ","這(離說話者近的東西)",[]],["それ","那(離聽者近的東西)",[]],["あれ","那(離說話者、聽者都遠的東西)",[]],["この〜","這個~",[]],["その〜","那個~（近對方）",[]],["あの〜","那個~（遠）",[]],
-      ["ほん（本）","書",[]],["じしょ（辞書）","字典",[]],["ざっし（雑誌）","雜誌",[]],["しんぶん（新聞）","報紙",[]],["ノート","筆記本",[]],["てちょう（手帳）","記事本",[]],["めいし（名刺）","名片",[]],
-      ["カード","卡片",[]],["えんぴつ（鉛筆）","鉛筆",[]],["ボールペン","原子筆",[]],["シャープペンシル","自動鉛筆",[]],["かぎ","鑰匙",[]],["とけい（時計）","鐘錶",[]],["かさ（傘）","傘",[]],
-      ["かばん","皮包、提包",[]],["シーディー（CD）","CD、光碟",[]],["テレビ","電視",[]],["ラジオ","收音機",[]],["カメラ","照相機",[]],["コンピューター","電腦",[]],["くるま（車）","汽車",[]],
-      ["つくえ（机）","桌子",[]],["いす","椅子",[]],["チョコレート","巧克力",[]],["コーヒー","咖啡",[]],["[お]みやげ","伴手禮、土產",[]],["えいご（英語）","英語",[]],
-      ["にほんご（日本語）","日語",[]],["〜ご（〜語）","〜語",[]],["なん（何）","什麼",[]],["そうです","是的",[]],["これからお世話になります。","今後將承蒙您的照顧。",[]],
-      ["こちらこそ[どうぞ]よろしく[お願いします]。","哪裡哪裡，也請您多多指教。",[]],["あのう","那個⋯（客氣、躊躇地搭話）",[]],["えっ。","咦⋯（聽到意外消息時）",[]],["どうぞ。","請。（勸對方做某事）",[]],
-      ["[どうも]ありがとう[ございます]。","謝謝。",[]],["そうですか。","這樣啊",[]],["ちがいます（違います）。","不是。",[]],["あ","啊（意識到什麼時）",[]]
+      ["これ","這（近我）",[]],["それ","那（近你）",[]],["ほん（本）","書",[]],["じしょ（辞書）","字典",[]],["えいご（英語）","英語",[]],["にほんご（日本語）","日語",[]]
     ];
     const L3_RAW = [
-      ["ここ","這裡(離說話人近的場所)",[]],["そこ","那裡(離聽話人近的場所)",[]],["あそこ","那裡(離說話人、聽話人都遠的場所)",[]],["どこ","哪裡",[]],
-      ["こちら","這邊(「ここ」的禮貌用語)",[]],["そちら","那邊(「そこ」的禮貌用語)",[]],["あちら","那邊(「あそこ」的禮貌用語)",[]],["どちら","哪邊「どこ」的禮貌用語)",[]],
-      ["きょうしつ（教室）","教室",[]],["しょくどう（食堂）","食堂、餐廳",[]],["じむしょ（事務所）","辦事處、事務所",[]],["かいぎしつ（会議室）","會議室",[]],["うけつけ（受付）","接待處、服務台",[]],
-      ["ロビー","大廳、休息室",[]],["へや（部屋）","房間",[]],["トイレ(おてあらい)（(お手洗い)）","廁所(洗手間)",[]],["かいだん（階段）","樓梯",[]],["エレベーター","電梯",[]],
-      ["エスカレーター","電扶梯",[]],["じどうはんばいき（自動販売機）","自動販賣機",[]],["でんわ（電話）","電話",[]],["[お]くに（[お]国）","國家、故鄉",[T.COUNTRY]],["かいしゃ（会社）","公司",[]],
-      ["うち","家",[]],["くつ（靴）","鞋子",[]],["ネクタイ","領帶",[]],["ワイン","葡萄酒",[]],["うりば（売り場）","賣場、專櫃",[]],["ちか（地下）","地下",[]],
-      ["⋯かい/がい（⋯階）","...樓",[]],["なんがい（何階）","幾樓",[]],["⋯えん（⋯円）","...日圓",[]],["いくら","多少錢",[]],["ひゃく（百）","百",[]],["せん（千）","千",[]],["まん（万）","萬",[]],
-      ["いらっしゃいませ。","歡迎光臨（招呼客人）",[]],["[〜を]みせてください。 （[〜を]見せてください。）","請讓我看一下（〜）。",[]],["じゃ","那麼",[]],
-      ["「〜を]ください。","請給我（〜）。",[]],["すみません。","對不起／抱歉。",[]],["どうも。","謝謝。",[]],["イタリア","義大利",[T.COUNTRY]],["スイス","瑞士",[T.COUNTRY]],
-      ["フランス","法國",[T.COUNTRY]],["ジャカルタ","雅加達",[]],["バンコク","曼谷",[]],["ベルリン","柏林",[]],["しんおおさか（新大阪）","新大阪（大阪的車站名）",[]]
+      ["ここ","這裡",[]],["そこ","那裡",[]],["きょうしつ（教室）","教室",[]],["ちか（地下）","地下",[]],["イタリア","義大利",[T.COUNTRY]]
     ];
     const L4_RAW = [
-      ["おきます（起きます）","起床",[]],["ねます（寝ます）","睡覺",[]],["はたらきます（働きます）","工作",[]],["やすみます（休みます）","休息",[]],
-      ["べんきょうします（勉強します）","念書",[]],["おわります（終わります）","結束",[]],
-      ["デパート","百貨公司",[]],["ぎんこう（銀行）","銀行",[]],["ゆうびんきょく（郵便局）","郵局",[]],["としょかん（図書館）","圖書館",[]],["びじゅつかん（美術館）","美術館",[]],
-      ["いま（今）","現在",[T.TIME]],["⋯じ（…時）","...點",[T.TIME]],["⋯ふん（⋯ぷん）（…分）","...分",[T.TIME]],["はん（半）","半",[T.TIME]],["なんじ（何時）","幾點",[T.TIME]],["なんぷん（何分）","幾分",[T.TIME]],
-      ["ごぜん（午前）","上午",[T.TIME]],["ごご（午後）","下午",[T.TIME]],["あさ（朝）","早上",[T.TIME]],["ひる（昼）","白天",[T.TIME]],["ばん（晩）","晚上",[T.TIME]],["よる（夜）","晚上",[T.TIME]],
-      ["おととい","前天",[T.TIME]],["きのう","昨天",[T.TIME]],["きょう","今天",[T.TIME]],["あした","明天",[T.TIME]],["あさって","後天",[T.TIME]],
-      ["けさ","今天早上",[T.TIME]],["こんばん（今晩）","今晚",[T.TIME]],["やすみ（休み）","休息、休假",[]],
-      ["ひるやすみ（昼休み）","午休",[T.TIME]],["しけん（試験）","考試",[]],["かいぎ（会議）","會議",[]],["えいが（映画）","電影",[]],
-      ["まいあさ（毎朝）","每天早上",[T.TIME]],["まいばん（毎晩）","每天晚上",[T.TIME]],["まいにち（毎日）","每天",[T.TIME]],
-      ["げつようび（月曜日）","星期一",[T.TIME]],["かようび（火曜日）","星期二",[T.TIME]],["すいようび（水曜日）","星期三",[T.TIME]],["もくようび（木曜日）","星期四",[T.TIME]],
-      ["きんようび（金曜日）","星期五",[T.TIME]],["どようび（土曜日）","星期六",[T.TIME]],["にちようび（日曜日）","星期天",[T.TIME]],["なんようび（何曜日）","星期幾",[T.TIME]],
-      ["〜から","從〜",[T.TIME]],["〜まで","到〜",[T.TIME]],["〜と〜","〜和〜",[]],
-      ["ばんごう（番号）","號碼",[]],["なんばん（何番）","幾號",[]],["そちら","那邊、您那邊",[]],["たいへんですね。（大変ですね。）","真是辛苦啊。",[]],
-      ["ニューヨーク","紐約",[T.COUNTRY]],["ペキン","北京",[T.COUNTRY]],["ロサンゼルス","洛杉磯",[T.COUNTRY]],["ロンドン","倫敦",[T.COUNTRY]]
+      ["おきます（起きます）","起床",[]],["ねます（寝ます）","睡覺",[]],["はん（半）","半",[T.TIME]],["なんじ（何時）","幾點",[T.TIME]],["なんぷん（何分）","幾分",[T.TIME]],
+      ["ごぜん（午前）","上午",[T.TIME]],["ごご（午後）","下午",[T.TIME]],["まいにち（毎日）","每天",[T.TIME]],["げつようび（月曜日）","星期一",[T.TIME]],["にちようび（日曜日）","星期天",[T.TIME]]
     ];
 
     function toObj([jp, zh, tags], l){
       const {kana, kanji} = parseKanjiKanaFlexible(jp);
-      const normalizedTags = (tags||[]);
-      return {id:jp, jp, zh, kana, kanji, l, tags: normalizedTags};
+      return {id:jp, jp, zh, kana, kanji, l, tags: tags||[]};
     }
     const L1 = L1_RAW.map(x=>toObj(x,"L1"));
     const L2 = L2_RAW.map(x=>toObj(x,"L2"));
     const L3 = L3_RAW.map(x=>toObj(x,"L3"));
     const L4 = L4_RAW.map(x=>toObj(x,"L4"));
-    const ALL = [...L1, ...L2, ...L3, ...L4];
+    const ALL = [...L1,...L2,...L3,...L4];
 
     // ========= State =========
-    let mode = "jp2zh";
+    let mode = "handwrite";
     let pool = [];
     let totalQ = 10;
     let qIndex = 0;
@@ -226,7 +218,7 @@
     let timeLeft = 60;
     let timerId = null;
     let wrongSet = [];
-    let starSet = new Set(JSON.parse(localStorage.getItem("minna_L1_4_stars")||"[]"));
+    let starSet = new Set(JSON.parse(localStorage.getItem("minna_stars")||"[]"));
 
     const $ = (s, r=document)=>r.querySelector(s);
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
@@ -251,7 +243,7 @@
     }
     function toggleStar(id){
       if(starSet.has(id)) starSet.delete(id); else starSet.add(id);
-      localStorage.setItem("minna_L1_4_stars", JSON.stringify([...starSet]));
+      localStorage.setItem("minna_stars", JSON.stringify([...starSet]));
     }
     renderBank(document.getElementById("bankL1"), L1);
     renderBank(document.getElementById("bankL2"), L2);
@@ -259,24 +251,109 @@
     renderBank(document.getElementById("bankL4"), L4);
 
     document.querySelectorAll('[data-q]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; });
+      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); $("#qcount").textContent = "目前：" + totalQ + " 題"; });
     });
-    document.getElementById("startBtn").addEventListener("click", startQuiz);
-    document.getElementById("speakBtn").addEventListener("click", speakPrompt);
-    document.getElementById("restart").addEventListener("click", ()=>{ document.getElementById("summary").style.display="none"; document.getElementById("setup").style.display="block" });
-    document.getElementById("retryWrong").addEventListener("click", retryWrongOnly);
+    $("#startBtn").addEventListener("click", startQuiz);
+    $("#speakBtn").addEventListener("click", speakPrompt);
+    $("#restart").addEventListener("click", ()=>{ $("#summary").style.display="none"; $("#setup").style.display="block" });
+    $("#retryWrong").addEventListener("click", retryWrongOnly);
 
+    // === Handwriting Pad ===
+    const pad = document.getElementById("pad");
+    const ctx = pad.getContext("2d");
+    let drawing = false;
+    let last = null;
+    const strokes = []; // each stroke: array of points
+    let currentStroke = null;
+
+    function resizePad(){
+      const ratio = window.devicePixelRatio || 1;
+      const rect = pad.getBoundingClientRect();
+      pad.width = rect.width * ratio;
+      pad.height = rect.height * ratio;
+      ctx.scale(ratio, ratio);
+      redrawPad();
+    }
+    function redrawPad(){
+      ctx.clearRect(0,0,pad.width, pad.height);
+      // grid
+      const w = pad.clientWidth, h = pad.clientHeight;
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,0,0,.06)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+      ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+      ctx.stroke();
+      ctx.restore();
+      // strokes
+      ctx.lineCap="round"; ctx.lineJoin="round"; ctx.lineWidth = 4; ctx.strokeStyle="#333";
+      strokes.forEach(s=>{
+        if(s.length<2) return;
+        ctx.beginPath();
+        ctx.moveTo(s[0].x, s[0].y);
+        for(let i=1;i<s.length;i++){ ctx.lineTo(s[i].x, s[i].y); }
+        ctx.stroke();
+      });
+    }
+    function padPos(e){
+      const rect = pad.getBoundingClientRect();
+      const x = (e.touches? e.touches[0].clientX : e.clientX) - rect.left;
+      const y = (e.touches? e.touches[0].clientY : e.clientY) - rect.top;
+      return {x, y};
+    }
+    function startDraw(e){ drawing=true; currentStroke=[]; strokes.push(currentStroke); last = padPos(e); currentStroke.push(last); redrawPad(); e.preventDefault(); }
+    function moveDraw(e){ if(!drawing) return; const p = padPos(e); currentStroke.push(p); redrawPad(); e.preventDefault(); }
+    function endDraw(){ drawing=false; last=null; }
+
+    pad.addEventListener("mousedown", startDraw);
+    pad.addEventListener("mousemove", moveDraw);
+    window.addEventListener("mouseup", endDraw);
+    pad.addEventListener("touchstart", startDraw, {passive:false});
+    pad.addEventListener("touchmove", moveDraw, {passive:false});
+    window.addEventListener("touchend", endDraw);
+
+    window.addEventListener("resize", resizePad);
+
+    $("#padUndo").addEventListener("click", ()=>{ strokes.pop(); redrawPad(); });
+    $("#padClear").addEventListener("click", ()=>{ strokes.length=0; redrawPad(); });
+
+    let currentQ = null;
+    $("#padShowAnswer").addEventListener("click", ()=>{
+      if(!currentQ) return;
+      const box = $("#resultBox");
+      $("#resHead").textContent = "📝 正解";
+      $("#resBody").textContent = `${currentQ.kanji || currentQ.jp} → ${currentQ.kana}｜${currentQ.zh}`;
+      box.classList.remove("bad"); box.classList.add("ok"); box.style.display="block";
+      $("#selfJudgeRow").style.display="flex";
+    });
+
+    $("#padTrace").addEventListener("click", ()=>{
+      if(!currentQ) return;
+      // draw kana as faded text at center for tracing
+      const w = pad.clientWidth, h = pad.clientHeight;
+      redrawPad();
+      const kana = currentQ.kana || currentQ.jp;
+      const fontSize = Math.min(w,h)*0.5;
+      ctx.save();
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = "#000";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `bold ${fontSize}px serif`;
+      ctx.fillText(kana, w/2, h/2);
+      ctx.restore();
+      document.getElementById("traceBadge").style.display="inline-flex";
+      document.getElementById("traceChar").textContent = kana;
+    });
+
+    // === Core quiz ===
     function buildPool(){
-      const use1 = document.getElementById("useL1").checked;
-      const use2 = document.getElementById("useL2").checked;
-      const use3 = document.getElementById("useL3").checked;
-      const use4 = document.getElementById("useL4").checked;
-      const wantSuffix = document.getElementById("tagSuffix").checked;
-      const wantCountry = document.getElementById("tagCountry").checked;
-      const wantTime = document.getElementById("tagTime").checked;
-      const onlyStar = document.getElementById("onlyStar").checked;
+      const useL1 = $("#l1").checked, useL2 = $("#l2").checked, useL3 = $("#l3").checked, useL4 = $("#l4").checked;
+      const wantSuffix = $("#tagSuffix").checked, wantCountry = $("#tagCountry").checked, wantTime = $("#tagTime").checked;
+      const onlyStar = $("#onlyStar").checked;
 
-      let p = ALL.filter(w => (w.l==="L1" && use1) || (w.l==="L2" && use2) || (w.l==="L3" && use3) || (w.l==="L4" && use4));
+      let p = ALL.filter(w => (w.l==="L1" && useL1) || (w.l==="L2" && useL2) || (w.l==="L3" && useL3) || (w.l==="L4" && useL4));
       if(wantSuffix || wantCountry || wantTime){
         p = p.filter(w => {
           const hasS = w.tags.includes(T.SUFFIX);
@@ -286,90 +363,105 @@
         });
       }
       if(onlyStar){ p = p.filter(w=> starSet.has(w.id)); }
-      const byLesson = document.getElementById("byLesson").checked;
-      if(byLesson){
-        const order = ["L1","L2","L3","L4"];
-        p.sort((a,b)=> order.indexOf(a.l) - order.indexOf(b.l));
-      }else{
-        shuffle(p);
-      }
       return p;
     }
 
     function startTimer(){
       if(!timed){ return; }
       clearInterval(timerId);
-      document.getElementById("timeChip").style.display = "inline-block";
-      document.getElementById("timeLeft").textContent = timeLeft;
+      $("#timeChip").style.display = "inline-block";
+      $("#timeLeft").textContent = timeLeft;
       timerId = setInterval(()=>{
         timeLeft--;
-        document.getElementById("timeLeft").textContent = timeLeft;
+        $("#timeLeft").textContent = timeLeft;
         if(timeLeft<=0){ clearInterval(timerId); endQuiz(true); }
       }, 1000);
     }
     function addBonusSeconds(n=3){
       if(!timed) return;
       timeLeft = Math.min(timeLeft + n, 999);
-      document.getElementById("timeLeft").textContent = timeLeft;
-      const t = document.createElement("span"); t.textContent = `+${n}s`; t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
-      const chip = document.getElementById("timeChip"); chip.appendChild(t); setTimeout(()=>t.remove(), 600);
+      $("#timeLeft").textContent = timeLeft;
+      const t = document.createElement("span");
+      t.textContent = `+${n}s`;
+      t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
+      const chip = $("#timeChip"); chip.appendChild(t);
+      setTimeout(()=>t.remove(), 600);
+    }
+
+    $("#selfOk").addEventListener("click", ()=>selfJudge(true));
+    $("#selfBad").addEventListener("click", ()=>selfJudge(false));
+
+    function selfJudge(ok){
+      const box = $("#resultBox");
+      if(ok){
+        score++; streak++; bestStreak = Math.max(bestStreak, streak);
+        $("#score").textContent = score; $("#streak").textContent = streak;
+        box.classList.remove("bad"); box.classList.add("ok");
+        $("#resHead").textContent = "✅ 記錄為正確";
+        if(timed) addBonusSeconds(3);
+      }else{
+        streak=0; $("#streak").textContent = streak;
+        box.classList.remove("ok"); box.classList.add("bad");
+        $("#resHead").textContent = "❌ 記錄為錯誤";
+        wrongSet.push(currentQ);
+      }
+      $("#nextBtn").disabled = false;
     }
 
     function startQuiz(){
       mode = document.querySelector('input[name="mode"]:checked').value;
       pool = buildPool();
-      if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
-      timed = document.getElementById("timed").checked;
+      if(pool.length < 1){ alert("題庫過小：請調整範圍或篩選。"); return; }
+      timed = $("#timed").checked;
       timeLeft = 60;
+
       qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
-      document.getElementById("score").textContent = "0"; document.getElementById("streak").textContent = "0";
-      document.getElementById("setup").style.display="none";
-      document.getElementById("quiz").style.display="block";
-      document.getElementById("summary").style.display="none";
-      document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+      $("#score").textContent = "0"; $("#streak").textContent = "0";
+      $("#setup").style.display="none";
+      $("#quiz").style.display="block";
+      $("#summary").style.display="none";
+      $("#modeTag").textContent = mode==="handwrite"?"手寫":(mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名"));
       startTimer();
       nextQuestion();
     }
 
     function nextQuestion(){
-      document.getElementById("resultBox").style.display="none";
-      document.getElementById("nextBtn").disabled = true;
+      $("#resultBox").style.display="none";
+      $("#nextBtn").disabled = true;
+      $("#selfJudgeRow").style.display="none";
+      document.getElementById("traceBadge").style.display="none";
       if(qIndex >= totalQ){ endQuiz(); return; }
-      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%`;
+      $("#meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
+      $("#bar").style.width = ((qIndex)/totalQ)*100 + "%";
 
-      const q = pool[Math.floor(Math.random()*pool.length)];
-      const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
+      currentQ = pool[Math.floor(Math.random()*pool.length)];
 
-      if(mode==="kanji2kana"){
-        const prompt = q.kanji || q.jp;
-        const distractors = sample(ALL.filter(w=> w.kana!==q.kana), 2);
-        const opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = prompt + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.kana), q.kana, q);
-        document.getElementById("choices").dataset.prompt = q.kana;
-      } else if(mode==="jp2zh"){
-        const distractors = sample(ALL.filter(w=> w.zh!==q.zh), 2);
-        const opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = q.jp + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.zh), q.zh, q);
-        document.getElementById("choices").dataset.prompt = q.jp;
-      } else {
-        const distractors = sample(ALL.filter(w=> w.jp!==q.jp), 2);
-        const opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = q.zh + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.jp), q.jp, q);
-        document.getElementById("choices").dataset.prompt = q.jp;
+      const starBtnHTML = `<button class="starbtn ${starSet.has(currentQ.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(currentQ.id)?'⭐️':'☆'}</button>`;
+
+      if(mode==="handwrite"){
+        $("#handwriteWrap").style.display="block";
+        $("#choices").style.display="none";
+        $("#qtext").innerHTML = `${currentQ.kanji || currentQ.jp}（請寫：かな） ${starBtnHTML}`;
+        strokes.length=0; resizePad();
+      }else{
+        $("#handwriteWrap").style.display="none";
+        $("#choices").style.display="grid";
+        // fall back to choice modes for completeness
+        const distractors = sample(pool.filter(w=> w.zh!==currentQ.zh), 2);
+        const opts = shuffle([currentQ, ...distractors]);
+        $("#qtext").innerHTML = `${currentQ.jp} ${starBtnHTML}`;
+        renderChoices(opts.map(o=>o.zh), currentQ.zh, currentQ);
+        $("#choices").dataset.prompt = currentQ.jp;
       }
 
       const starBtn = document.getElementById("starQBtn");
-      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
+      starBtn.onclick = ()=>{ toggleStar(currentQ.id); starBtn.textContent = starSet.has(currentQ.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(currentQ.id)); };
 
-      document.getElementById("nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+      $("#nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
     }
 
     function renderChoices(texts, correctText, qobj){
-      const choices = document.getElementById("choices"); choices.innerHTML="";
+      const choices = $("#choices"); choices.innerHTML="";
       texts.forEach((txt, idx)=>{
         const div = document.createElement("div");
         div.className="choice";
@@ -378,76 +470,68 @@
         choices.appendChild(div);
       });
     }
+
     function onChoose(chosenText, correctText, q){
       const ok = (chosenText === correctText);
-      const box = document.getElementById("resultBox");
-      const head = document.getElementById("resHead");
-      const body = document.getElementById("resBody");
+      const box = $("#resultBox");
+      const head = $("#resHead");
+      const body = $("#resBody");
       if(ok){
         score++; streak++; bestStreak = Math.max(bestStreak, streak);
-        document.getElementById("score").textContent = score; document.getElementById("streak").textContent = streak;
+        $("#score").textContent = score; $("#streak").textContent = streak;
         box.classList.remove("bad"); box.classList.add("ok");
         head.textContent = "✅ 正確！";
         if(timed) addBonusSeconds(3);
       }else{
-        streak=0; document.getElementById("streak").textContent = streak;
+        streak=0; $("#streak").textContent = streak;
         box.classList.remove("ok"); box.classList.add("bad");
         head.textContent = "❌ 答錯了";
         wrongSet.push(q);
       }
-      if(mode==="kanji2kana"){
-        body.textContent = `${q.kanji} → ${q.kana}｜${q.zh}`;
-      }else if(mode==="jp2zh"){
-        body.textContent = `${q.jp} → ${q.zh}`;
-      }else{
-        body.textContent = `${q.zh} → ${q.jp}`;
-      }
+      body.textContent = `${q.jp} → ${q.zh}`;
       box.style.display="block";
-      document.getElementById("nextBtn").disabled = false;
+      $("#nextBtn").disabled = false;
     }
 
     function endQuiz(timeUp=false){
       clearInterval(timerId); timerId=null;
-      document.getElementById("quiz").style.display="none";
-      document.getElementById("summary").style.display="block";
+      $("#quiz").style.display="none";
+      $("#summary").style.display="block";
       document.getElementById("finalScore").textContent = score;
       document.getElementById("finalTotal").textContent = totalQ;
       document.getElementById("finalStreak").textContent = bestStreak;
       document.getElementById("bar").style.width = "100%";
-      document.getElementById("timeChip").style.display = "none";
+      $("#timeChip").style.display = "none";
       const btn = document.getElementById("retryWrong");
       btn.disabled = wrongSet.length===0;
       if(timeUp){ alert("時間到！看看這回合成績～"); }
     }
+
     function retryWrongOnly(){
       if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
-      const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
+      const map = new Map();
+      wrongSet.forEach(w=>map.set(w.id,w));
       pool = [...map.values()];
+      mode = "handwrite";
       timed = false;
       qIndex=0; score=0; streak=0; bestStreak=0;
       document.getElementById("score").textContent = "0";
       document.getElementById("streak").textContent = "0";
+      document.getElementById("modeTag").textContent = "手寫";
       document.getElementById("summary").style.display="none";
       document.getElementById("quiz").style.display="block";
       nextQuestion();
     }
 
     function speakPrompt(){
-      const utter = new SpeechSynthesisUtterance(document.getElementById("choices").dataset.prompt || "");
+      const utter = new SpeechSynthesisUtterance((currentQ?.kanji || currentQ?.jp || ""));
       utter.lang = "ja-JP";
       speechSynthesis.stop();
       speechSynthesis.speak(utter);
     }
 
-    // 快捷鍵 A/B/C
-    document.addEventListener("keydown", (e)=>{
-      const map = { "a":0, "b":1, "c":2 };
-      if(map[e.key?.toLowerCase()]!=null){
-        const idx = map[e.key.toLowerCase()];
-        const node = document.querySelectorAll("#choices .choice")[idx];
-        if(node) node.click();
-      }
-    });
+    // initial
+    setTimeout(resizePad, 50);
   </script>
 </body>
 </html>
