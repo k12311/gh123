@@ -153,7 +153,7 @@
       return {kana:jp, kanji:jp};
     }
 
-    // === 題庫（**完全照你的第一份，未改任何字詞**）===
+    // === 題庫（完全照你的第一份，未改任何字詞）===
     const L1_RAW = [
       ["わたし","我",[]],["あなた","你、您",[]],["あのひと（あの人）","他、她、那個人",[]],["あのかた（あの方）","「あの人」的禮貌說法",[]],
       ["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜ちゃん","代替「〜さん」，接在小孩子名字後（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
@@ -336,7 +336,7 @@
       document.getElementById("nextBtn").disabled = true;
       if(qIndex >= totalQ){ endQuiz(); return; }
       document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%`;
+      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%";
 
       const q = pool[Math.floor(Math.random()*pool.length)];
       const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
