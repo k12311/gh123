@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>大家的日本語 N5｜單字小考（L1–L4 ULTRA+）</title>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>大家的日本語 N5｜L1–L4 單字小考（固定題庫）</title>
   <style>
     :root{ --bg1:#fff6dc; --bg2:#ffeec5; --paper:#fff7da; --ink:#1d1608; --accent:#d9983d; --accent-d:#b67a2f; --ok:#2e7d32; --bad:#c62828; --shadow:0 10px 20px rgba(0,0,0,.08); }
     html,body{height:100%}
@@ -42,10 +40,9 @@
     .meter{flex:1;display:flex;gap:10px;align-items:center}
     .progress{height:12px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:999px;overflow:hidden;flex:1}
     .bar{height:100%;width:0;background:linear-gradient(90deg,#d9983d,#f7c66d)}
-    .export{display:flex;gap:8px;flex-wrap:wrap}
-    .hint{opacity:.85;font-size:.95rem}
     .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
     .item{background:var(--paper);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .hint{opacity:.85;font-size:.95rem}
   </style>
 </head>
 <body>
@@ -53,7 +50,7 @@
     <header>
       <div class="brand">
         <div class="logo">単</div>
-        <div class="title">大家的日本語 N5｜單字小考（L1–L4 ULTRA+）</div>
+        <div class="title">大家的日本語 N5｜L1–L4 單字小考（固定題庫）</div>
       </div>
       <div class="hud">
         <div class="chip">分數 <span id="score">0</span></div>
@@ -64,7 +61,7 @@
 
     <main>
       <section class="card section" id="setup">
-        <div class="title2">選擇模式</div>
+        <div class="title2">模式</div>
         <div class="grid">
           <label class="row"><input type="radio" name="mode" value="jp2zh" checked> <span class="pill">看到日文 → 選中文</span></label>
           <label class="row"><input type="radio" name="mode" value="zh2jp"> <span class="pill">看到中文 → 選日文</span></label>
@@ -73,24 +70,18 @@
 
         <div class="title2">範圍</div>
         <div class="row">
-          <label class="pill"><input type="checkbox" id="l1" checked> L1</label>
-          <label class="pill"><input type="checkbox" id="l2" checked> L2</label>
-          <label class="pill"><input type="checkbox" id="l3" checked> L3</label>
-          <label class="pill"><input type="checkbox" id="l4" checked> L4</label>
+          <label class="pill"><input type="checkbox" id="useL1" checked> L1</label>
+          <label class="pill"><input type="checkbox" id="useL2" checked> L2</label>
+          <label class="pill"><input type="checkbox" id="useL3" checked> L3</label>
+          <label class="pill"><input type="checkbox" id="useL4" checked> L4</label>
         </div>
 
         <div class="title2">標籤篩選</div>
         <div class="row">
-          <label class="pill"><input type="checkbox" id="tagSuffix"> 接尾詞（〜さん／〜ちゃん／〜じん）</label>
+          <label class="pill"><input type="checkbox" id="tagSuffix"> 接尾詞</label>
           <label class="pill"><input type="checkbox" id="tagCountry"> 國家</label>
-          <label class="pill"><input type="checkbox" id="tagTime"> 只練「時間類」</label>
-          <span class="hint">（勾選多個＝取聯集）</span>
-        </div>
-
-        <div class="title2">出題來源</div>
-        <div class="row">
-          <label class="pill"><input type="checkbox" id="onlyStar"> 只出 ⭐️ 星號單字</label>
-          <span class="hint">（星號會存在你的瀏覽器，之後打開也還在）</span>
+          <label class="pill"><input type="checkbox" id="tagTime"> 時間類</label>
+          <span class="pill"><input type="checkbox" id="onlyStar"> 只出 ⭐️ 星號單字</span>
         </div>
 
         <div class="title2">題數 & 限時</div>
@@ -101,13 +92,7 @@
         </div>
         <div class="row">
           <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
-        </div>
-
-        <div class="title2">匯出</div>
-        <div class="export">
-          <button class="ghost" id="expCurrent">匯出當前範圍 → Anki CSV</button>
-          <button class="ghost" id="expStar">匯出星號單字 → Anki CSV</button>
-          <span class="hint">欄位：Front（JP/漢字）、Reading（かな）、Back（中文）、Lesson、Tags</span>
+          <label class="pill"><input type="checkbox" id="byLesson"> 依課次順序（關閉＝隨機混合）</label>
         </div>
 
         <details>
@@ -168,7 +153,7 @@
       return {kana:jp, kanji:jp};
     }
 
-    // ---- L1 & L2 (原資料同前) ----
+    // === 題庫（**完全照你的第一份，未改任何字詞**）===
     const L1_RAW = [
       ["わたし","我",[]],["あなた","你、您",[]],["あのひと（あの人）","他、她、那個人",[]],["あのかた（あの方）","「あの人」的禮貌說法",[]],
       ["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜ちゃん","代替「〜さん」，接在小孩子名字後（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
@@ -190,8 +175,6 @@
       ["こちらこそ[どうぞ]よろしく[お願いします]。","哪裡哪裡，也請您多多指教。",[]],["あのう","那個⋯（客氣、躊躇地搭話）",[]],["えっ。","咦⋯（聽到意外消息時）",[]],["どうぞ。","請。（勸對方做某事）",[]],
       ["[どうも]ありがとう[ございます]。","謝謝。",[]],["そうですか。","這樣啊",[]],["ちがいます（違います）。","不是。",[]],["あ","啊（意識到什麼時）",[]]
     ];
-
-    // ---- L3 ----
     const L3_RAW = [
       ["ここ","這裡(離說話人近的場所)",[]],["そこ","那裡(離聽話人近的場所)",[]],["あそこ","那裡(離說話人、聽話人都遠的場所)",[]],["どこ","哪裡",[]],
       ["こちら","這邊(「ここ」的禮貌用語)",[]],["そちら","那邊(「そこ」的禮貌用語)",[]],["あちら","那邊(「あそこ」的禮貌用語)",[]],["どちら","哪邊「どこ」的禮貌用語)",[]],
@@ -204,8 +187,6 @@
       ["「〜を]ください。","請給我（〜）。",[]],["すみません。","對不起／抱歉。",[]],["どうも。","謝謝。",[]],["イタリア","義大利",[T.COUNTRY]],["スイス","瑞士",[T.COUNTRY]],
       ["フランス","法國",[T.COUNTRY]],["ジャカルタ","雅加達",[]],["バンコク","曼谷",[]],["ベルリン","柏林",[]],["しんおおさか（新大阪）","新大阪（大阪的車站名）",[]]
     ];
-
-    // ---- L4 with TIME tags ----
     const L4_RAW = [
       ["おきます（起きます）","起床",[]],["ねます（寝ます）","睡覺",[]],["はたらきます（働きます）","工作",[]],["やすみます（休みます）","休息",[]],
       ["べんきょうします（勉強します）","念書",[]],["おわります（終わります）","結束",[]],
@@ -245,7 +226,7 @@
     let timeLeft = 60;
     let timerId = null;
     let wrongSet = [];
-    let starSet = new Set(JSON.parse(localStorage.getItem("minna_stars")||"[]"));
+    let starSet = new Set(JSON.parse(localStorage.getItem("minna_L1_4_stars")||"[]"));
 
     const $ = (s, r=document)=>r.querySelector(s);
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
@@ -261,7 +242,6 @@
         btn.className = "starbtn";
         btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆";
         if(starSet.has(w.id)) btn.classList.add("star-on");
-        btn.title = "加到星號";
         btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); };
         const left = document.createElement("div");
         left.innerHTML = `<div style="font-weight:900">${jk}</div><div>${w.zh}</div><div class="pill">${w.l}${w.tags.length? "｜"+w.tags.join("・"):""}</div>`;
@@ -271,67 +251,47 @@
     }
     function toggleStar(id){
       if(starSet.has(id)) starSet.delete(id); else starSet.add(id);
-      localStorage.setItem("minna_stars", JSON.stringify([...starSet]));
+      localStorage.setItem("minna_L1_4_stars", JSON.stringify([...starSet]));
     }
-
     renderBank(document.getElementById("bankL1"), L1);
     renderBank(document.getElementById("bankL2"), L2);
     renderBank(document.getElementById("bankL3"), L3);
     renderBank(document.getElementById("bankL4"), L4);
 
     document.querySelectorAll('[data-q]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); $("#qcount").textContent = "目前：" + totalQ + " 題"; });
+      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; });
     });
-    $("#startBtn").addEventListener("click", startQuiz);
-    $("#speakBtn").addEventListener("click", speakPrompt);
-    $("#restart").addEventListener("click", ()=>{ $("#summary").style.display="none"; $("#setup").style.display="block" });
-    $("#retryWrong").addEventListener("click", retryWrongOnly);
-
-    // === CSV Export ===
-    $("#expCurrent").addEventListener("click", ()=>{
-      const arr = buildPool(); // current filters
-      exportAnkiCSV(arr, "anki_current_scope.csv");
-    });
-    $("#expStar").addEventListener("click", ()=>{
-      const arr = ALL.filter(w=>starSet.has(w.id));
-      exportAnkiCSV(arr, "anki_starred.csv");
-    });
-
-    function sanitizeCSV(s){
-      if(s==null) return "";
-      const str = (""+s).replaceAll('"','""');
-      return `"${str}"`;
-    }
-    function exportAnkiCSV(items, filename){
-      if(!items.length){ alert("沒有可匯出的單字。請檢查範圍或星號設定！"); return; }
-      const header = ["Front(JP/漢字)","Reading(かな)","Back(中文)","Lesson","Tags"].map(sanitizeCSV).join(",") + "\\n";
-      const rows = items.map(w=>[w.kanji||w.jp, w.kana||w.jp, w.zh, w.l, w.tags.join(" ")].map(sanitizeCSV).join(",")).join("\\n");
-      const csv = header + rows;
-      const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
+    document.getElementById("startBtn").addEventListener("click", startQuiz);
+    document.getElementById("speakBtn").addEventListener("click", speakPrompt);
+    document.getElementById("restart").addEventListener("click", ()=>{ document.getElementById("summary").style.display="none"; document.getElementById("setup").style.display="block" });
+    document.getElementById("retryWrong").addEventListener("click", retryWrongOnly);
 
     function buildPool(){
-      const useL1 = $("#l1").checked, useL2 = $("#l2").checked, useL3 = $("#l3").checked, useL4 = $("#l4").checked;
-      const wantSuffix = $("#tagSuffix").checked, wantCountry = $("#tagCountry").checked, wantTime = $("#tagTime").checked;
-      const onlyStar = $("#onlyStar").checked;
+      const use1 = document.getElementById("useL1").checked;
+      const use2 = document.getElementById("useL2").checked;
+      const use3 = document.getElementById("useL3").checked;
+      const use4 = document.getElementById("useL4").checked;
+      const wantSuffix = document.getElementById("tagSuffix").checked;
+      const wantCountry = document.getElementById("tagCountry").checked;
+      const wantTime = document.getElementById("tagTime").checked;
+      const onlyStar = document.getElementById("onlyStar").checked;
 
-      let p = ALL.filter(w => (w.l==="L1" && useL1) || (w.l==="L2" && useL2) || (w.l==="L3" && useL3) || (w.l==="L4" && useL4));
-
+      let p = ALL.filter(w => (w.l==="L1" && use1) || (w.l==="L2" && use2) || (w.l==="L3" && use3) || (w.l==="L4" && use4));
       if(wantSuffix || wantCountry || wantTime){
         p = p.filter(w => {
           const hasS = w.tags.includes(T.SUFFIX);
           const hasC = w.tags.includes(T.COUNTRY);
           const hasT = w.tags.includes(T.TIME);
-          return (wantSuffix && hasS) || (wantCountry && hasC) || (wantTime && hasT);
+          return (wantSuffix&&hasS) || (wantCountry&&hasC) || (wantTime&&hasT);
         });
       }
-      if(onlyStar){
-        p = p.filter(w => starSet.has(w.id));
+      if(onlyStar){ p = p.filter(w=> starSet.has(w.id)); }
+      const byLesson = document.getElementById("byLesson").checked;
+      if(byLesson){
+        const order = ["L1","L2","L3","L4"];
+        p.sort((a,b)=> order.indexOf(a.l) - order.indexOf(b.l));
+      }else{
+        shuffle(p);
       }
       return p;
     }
@@ -339,80 +299,77 @@
     function startTimer(){
       if(!timed){ return; }
       clearInterval(timerId);
-      $("#timeChip").style.display = "inline-block";
-      $("#timeLeft").textContent = timeLeft;
+      document.getElementById("timeChip").style.display = "inline-block";
+      document.getElementById("timeLeft").textContent = timeLeft;
       timerId = setInterval(()=>{
         timeLeft--;
-        $("#timeLeft").textContent = timeLeft;
+        document.getElementById("timeLeft").textContent = timeLeft;
         if(timeLeft<=0){ clearInterval(timerId); endQuiz(true); }
       }, 1000);
     }
     function addBonusSeconds(n=3){
       if(!timed) return;
       timeLeft = Math.min(timeLeft + n, 999);
-      $("#timeLeft").textContent = timeLeft;
-      const t = document.createElement("span");
-      t.textContent = `+${n}s`;
-      t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
-      const chip = $("#timeChip"); chip.appendChild(t);
-      setTimeout(()=>t.remove(), 600);
+      document.getElementById("timeLeft").textContent = timeLeft;
+      const t = document.createElement("span"); t.textContent = `+${n}s`; t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
+      const chip = document.getElementById("timeChip"); chip.appendChild(t); setTimeout(()=>t.remove(), 600);
     }
 
     function startQuiz(){
       mode = document.querySelector('input[name="mode"]:checked').value;
       pool = buildPool();
-      if(pool.length < 3){ alert("題庫過小：請勾選至少一課，或取消過度的標籤／星號篩選。"); return; }
-      timed = $("#timed").checked;
+      if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
+      timed = document.getElementById("timed").checked;
       timeLeft = 60;
-
       qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
-      $("#score").textContent = "0"; $("#streak").textContent = "0";
-      $("#setup").style.display="none";
-      $("#quiz").style.display="block";
-      $("#summary").style.display="none";
-      $("#modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+      document.getElementById("score").textContent = "0"; document.getElementById("streak").textContent = "0";
+      document.getElementById("setup").style.display="none";
+      document.getElementById("quiz").style.display="block";
+      document.getElementById("summary").style.display="none";
+      document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
       startTimer();
       nextQuestion();
     }
 
     function nextQuestion(){
-      $("#resultBox").style.display="none";
-      $("#nextBtn").disabled = true;
+      document.getElementById("resultBox").style.display="none";
+      document.getElementById("nextBtn").disabled = true;
       if(qIndex >= totalQ){ endQuiz(); return; }
-      $("#meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      $("#bar").style.width = ((qIndex)/totalQ)*100 + "%";
+      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
+      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%`;
 
       const q = pool[Math.floor(Math.random()*pool.length)];
-      let opts;
       const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
 
       if(mode==="kanji2kana"){
         const prompt = q.kanji || q.jp;
-        const distractors = sample(pool.filter(w=> w.kana!==q.kana), 2);
-        opts = shuffle([q, ...distractors]);
-        $("#qtext").innerHTML = `${prompt} ${starBtnHTML}`;
+        const distractors = sample(ALL.filter(w=> w.kana!==q.kana), 2);
+        const opts = shuffle([q, ...distractors]);
+        document.getElementById("qtext").innerHTML = prompt + " " + starBtnHTML;
         renderChoices(opts.map(o=>o.kana), q.kana, q);
-        $("#choices").dataset.prompt = q.kana;
+        document.getElementById("choices").dataset.prompt = q.kana;
       } else if(mode==="jp2zh"){
-        const distractors = sample(pool.filter(w=> w.zh!==q.zh), 2);
-        opts = shuffle([q, ...distractors]);
-        $("#qtext").innerHTML = `${q.jp} ${starBtnHTML}`;
+        const distractors = sample(ALL.filter(w=> w.zh!==q.zh), 2);
+        const opts = shuffle([q, ...distractors]);
+        document.getElementById("qtext").innerHTML = q.jp + " " + starBtnHTML;
         renderChoices(opts.map(o=>o.zh), q.zh, q);
-        $("#choices").dataset.prompt = q.jp;
+        document.getElementById("choices").dataset.prompt = q.jp;
       } else {
-        const distractors = sample(pool.filter(w=> w.jp!==q.jp), 2);
-        opts = shuffle([q, ...distractors]);
-        $("#qtext").innerHTML = `${q.zh} ${starBtnHTML}`;
+        const distractors = sample(ALL.filter(w=> w.jp!==q.jp), 2);
+        const opts = shuffle([q, ...distractors]);
+        document.getElementById("qtext").innerHTML = q.zh + " " + starBtnHTML;
         renderChoices(opts.map(o=>o.jp), q.jp, q);
-        $("#choices").dataset.prompt = q.jp;
+        document.getElementById("choices").dataset.prompt = q.jp;
       }
 
       const starBtn = document.getElementById("starQBtn");
       starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
+
+      document.getElementById("nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
     }
 
     function renderChoices(texts, correctText, qobj){
-      const choices = $("#choices"); choices.innerHTML="";
+      const choices = document.getElementById("choices"); choices.innerHTML="";
       texts.forEach((txt, idx)=>{
         const div = document.createElement("div");
         div.className="choice";
@@ -421,25 +378,23 @@
         choices.appendChild(div);
       });
     }
-
     function onChoose(chosenText, correctText, q){
       const ok = (chosenText === correctText);
-      const box = $("#resultBox");
-      const head = $("#resHead");
-      const body = $("#resBody");
+      const box = document.getElementById("resultBox");
+      const head = document.getElementById("resHead");
+      const body = document.getElementById("resBody");
       if(ok){
         score++; streak++; bestStreak = Math.max(bestStreak, streak);
-        $("#score").textContent = score; $("#streak").textContent = streak;
+        document.getElementById("score").textContent = score; document.getElementById("streak").textContent = streak;
         box.classList.remove("bad"); box.classList.add("ok");
         head.textContent = "✅ 正確！";
         if(timed) addBonusSeconds(3);
       }else{
-        streak=0; $("#streak").textContent = streak;
+        streak=0; document.getElementById("streak").textContent = streak;
         box.classList.remove("ok"); box.classList.add("bad");
         head.textContent = "❌ 答錯了";
         wrongSet.push(q);
       }
-
       if(mode==="kanji2kana"){
         body.textContent = `${q.kanji} → ${q.kana}｜${q.zh}`;
       }else if(mode==="jp2zh"){
@@ -447,37 +402,31 @@
       }else{
         body.textContent = `${q.zh} → ${q.jp}`;
       }
-
       box.style.display="block";
-      $("#nextBtn").disabled = false;
-      $("#nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+      document.getElementById("nextBtn").disabled = false;
     }
 
     function endQuiz(timeUp=false){
       clearInterval(timerId); timerId=null;
-      $("#quiz").style.display="none";
-      $("#summary").style.display="block";
+      document.getElementById("quiz").style.display="none";
+      document.getElementById("summary").style.display="block";
       document.getElementById("finalScore").textContent = score;
       document.getElementById("finalTotal").textContent = totalQ;
       document.getElementById("finalStreak").textContent = bestStreak;
       document.getElementById("bar").style.width = "100%";
-      $("#timeChip").style.display = "none";
+      document.getElementById("timeChip").style.display = "none";
       const btn = document.getElementById("retryWrong");
       btn.disabled = wrongSet.length===0;
       if(timeUp){ alert("時間到！看看這回合成績～"); }
     }
-
     function retryWrongOnly(){
       if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
-      const map = new Map();
-      wrongSet.forEach(w=>map.set(w.id,w));
+      const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
       pool = [...map.values()];
-      mode = document.querySelector('input[name="mode"]:checked').value;
       timed = false;
       qIndex=0; score=0; streak=0; bestStreak=0;
       document.getElementById("score").textContent = "0";
       document.getElementById("streak").textContent = "0";
-      document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
       document.getElementById("summary").style.display="none";
       document.getElementById("quiz").style.display="block";
       nextQuestion();
@@ -490,6 +439,7 @@
       speechSynthesis.speak(utter);
     }
 
+    // 快捷鍵 A/B/C
     document.addEventListener("keydown", (e)=>{
       const map = { "a":0, "b":1, "c":2 };
       if(map[e.key?.toLowerCase()]!=null){
