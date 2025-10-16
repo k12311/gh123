@@ -16,6 +16,8 @@
     .title{font-weight:900;color:var(--accent)}
     .hud{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .chip{background:var(--paper);padding:6px 10px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)}
+    .home-link{ text-decoration:none;background:#fff;color:var(--accent);font-weight:900;border-radius:999px;padding:6px 12px;box-shadow:inset 0 0 0 2px var(--accent);transition:background .1s }
+    .home-link:hover{background:var(--paper)}
     main{flex:1;padding:14px;display:flex}
     .card{margin:auto;width:min(1000px,100%);background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:var(--shadow);padding:16px 14px}
     .section{display:flex;flex-direction:column;gap:12px}
@@ -56,6 +58,7 @@
         <div class="chip">分數 <span id="score">0</span></div>
         <div class="chip">連對 <span id="streak">0</span></div>
         <div class="chip" id="timeChip" style="display:none">⏱ <span id="timeLeft">60</span>s</div>
+        <a href="index.html" class="home-link">🏠 回首頁</a>
       </div>
     </header>
 
@@ -217,7 +220,8 @@
 
     // ========= State =========
     let mode = "jp2zh";
-    let pool = [];
+    let fullPool = [];
+    let qList = []; // 本回合題目（不重複）
     let totalQ = 10;
     let qIndex = 0;
     let score = 0;
@@ -227,6 +231,7 @@
     let timerId = null;
     let wrongSet = [];
     let starSet = new Set(JSON.parse(localStorage.getItem("minna_L1_4_stars")||"[]"));
+    let acceptingAnswer = false;
 
     const $ = (s, r=document)=>r.querySelector(s);
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
@@ -317,8 +322,13 @@
 
     function startQuiz(){
       mode = document.querySelector('input[name="mode"]:checked').value;
-      pool = buildPool();
-      if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
+      fullPool = buildPool();
+
+      if(fullPool.length < 3){
+        alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。");
+        return;
+      }
+
       timed = document.getElementById("timed").checked;
       timeLeft = 60;
       qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
@@ -327,6 +337,15 @@
       document.getElementById("quiz").style.display="block";
       document.getElementById("summary").style.display="none";
       document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+
+      // 生成本回合題目（不重複）
+      const byLesson = document.getElementById("byLesson").checked;
+      if(byLesson){
+        qList = fullPool.slice(0, Math.min(totalQ, fullPool.length));
+      }else{
+        qList = sample(fullPool, Math.min(totalQ, fullPool.length));
+      }
+
       startTimer();
       nextQuestion();
     }
@@ -334,11 +353,13 @@
     function nextQuestion(){
       document.getElementById("resultBox").style.display="none";
       document.getElementById("nextBtn").disabled = true;
-      if(qIndex >= totalQ){ endQuiz(); return; }
-      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%";
+      acceptingAnswer = true;
 
-      const q = pool[Math.floor(Math.random()*pool.length)];
+      if(qIndex >= qList.length){ endQuiz(); return; }
+      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${qList.length} 題`;
+      document.getElementById("bar").style.width = ((qIndex)/qList.length)*100 + "%";
+
+      const q = qList[qIndex];
       const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
 
       if(mode==="kanji2kana"){
@@ -374,15 +395,33 @@
         const div = document.createElement("div");
         div.className="choice";
         div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
-        div.addEventListener("click", ()=>onChoose(txt, correctText, qobj));
+        div.addEventListener("click", ()=>onChoose(div, txt, correctText, qobj));
         choices.appendChild(div);
       });
     }
-    function onChoose(chosenText, correctText, q){
+
+    function freezeChoices(){
+      document.querySelectorAll("#choices .choice").forEach(n=>{
+        n.classList.add("disabled");
+      });
+    }
+
+    function onChoose(node, chosenText, correctText, q){
+      if(!acceptingAnswer) return;
+      acceptingAnswer = false;
+
       const ok = (chosenText === correctText);
       const box = document.getElementById("resultBox");
       const head = document.getElementById("resHead");
       const body = document.getElementById("resBody");
+
+      // 標示正確/錯誤
+      document.querySelectorAll("#choices .choice").forEach(n=>{
+        const text = n.querySelector(".text").textContent;
+        if(text === correctText){ n.classList.add("correct"); }
+        if(n === node && !ok){ n.classList.add("wrong"); }
+      });
+
       if(ok){
         score++; streak++; bestStreak = Math.max(bestStreak, streak);
         document.getElementById("score").textContent = score; document.getElementById("streak").textContent = streak;
@@ -395,6 +434,7 @@
         head.textContent = "❌ 答錯了";
         wrongSet.push(q);
       }
+
       if(mode==="kanji2kana"){
         body.textContent = `${q.kanji} → ${q.kana}｜${q.zh}`;
       }else if(mode==="jp2zh"){
@@ -402,8 +442,11 @@
       }else{
         body.textContent = `${q.zh} → ${q.jp}`;
       }
+
       box.style.display="block";
       document.getElementById("nextBtn").disabled = false;
+      freezeChoices();
+      document.getElementById("bar").style.width = ((qIndex+1)/qList.length)*100 + "%";
     }
 
     function endQuiz(timeUp=false){
@@ -411,7 +454,7 @@
       document.getElementById("quiz").style.display="none";
       document.getElementById("summary").style.display="block";
       document.getElementById("finalScore").textContent = score;
-      document.getElementById("finalTotal").textContent = totalQ;
+      document.getElementById("finalTotal").textContent = qList.length;
       document.getElementById("finalStreak").textContent = bestStreak;
       document.getElementById("bar").style.width = "100%";
       document.getElementById("timeChip").style.display = "none";
@@ -419,10 +462,12 @@
       btn.disabled = wrongSet.length===0;
       if(timeUp){ alert("時間到！看看這回合成績～"); }
     }
+
     function retryWrongOnly(){
       if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
       const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
-      pool = [...map.values()];
+      fullPool = [...map.values()];
+      qList = sample(fullPool, Math.min(fullPool.length, 999)); // 全部錯題一次跑完
       timed = false;
       qIndex=0; score=0; streak=0; bestStreak=0;
       document.getElementById("score").textContent = "0";
@@ -439,11 +484,12 @@
       speechSynthesis.speak(utter);
     }
 
-    // 快捷鍵 A/B/C
+    // 快捷鍵 A/B/C（僅可在可作答階段）
     document.addEventListener("keydown", (e)=>{
+      if(!acceptingAnswer) return;
       const map = { "a":0, "b":1, "c":2 };
-      if(map[e.key?.toLowerCase()]!=null){
-        const idx = map[e.key.toLowerCase()];
+      const idx = map[e.key?.toLowerCase()];
+      if(idx!=null){
         const node = document.querySelectorAll("#choices .choice")[idx];
         if(node) node.click();
       }
