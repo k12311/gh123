@@ -16,6 +16,14 @@
     .title{font-weight:900;color:var(--accent)}
     .hud{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .chip{background:var(--paper);padding:6px 10px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)}
+    /* 回首頁按鈕 */
+    .home-link{
+      text-decoration:none;background:#fff;color:var(--accent);
+      font-weight:900;border-radius:999px;padding:6px 12px;
+      box-shadow:inset 0 0 0 2px var(--accent);
+      transition:background .12s;
+    }
+    .home-link:hover{background:var(--paper)}
     main{flex:1;padding:14px;display:flex}
     .card{margin:auto;width:min(1000px,100%);background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:var(--shadow);padding:16px 14px}
     .section{display:flex;flex-direction:column;gap:12px}
@@ -56,6 +64,8 @@
         <div class="chip">分數 <span id="score">0</span></div>
         <div class="chip">連對 <span id="streak">0</span></div>
         <div class="chip" id="timeChip" style="display:none">⏱ <span id="timeLeft">60</span>s</div>
+        <!-- 回首頁 -->
+        <a class="home-link" href="index.html">🏠 回首頁</a>
       </div>
     </header>
 
