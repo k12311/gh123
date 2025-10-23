@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>大家的日本語 N5｜L1–L4 單字小考（固定題庫）</title>
+  <title>大家的日本語 N5｜L1–L4 單字小考（固定題庫）—v2</title>
   <style>
     :root{ --bg1:#fff6dc; --bg2:#ffeec5; --paper:#fff7da; --ink:#1d1608; --accent:#d9983d; --accent-d:#b67a2f; --ok:#2e7d32; --bad:#c62828; --shadow:0 10px 20px rgba(0,0,0,.08); }
     html,body{height:100%}
@@ -32,8 +32,12 @@
     .starbtn{border:0;background:transparent;font-size:1.4rem;cursor:pointer}
     .star-on{color:#f4b400;filter:drop-shadow(0 1px 0 rgba(0,0,0,.2))}
     .choices{display:grid;grid-template-columns:1fr;gap:10px}
-    .choice{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 12px;font-size:1.1rem;font-weight:800;box-shadow:var(--shadow)}
+    .choice{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 12px;font-size:1.1rem;font-weight:800;box-shadow:var(--shadow);outline:none}
     .choice:active{transform:scale(.99)}
+    .choice.correct{border-color: color-mix(in oklab, var(--ok) 40%, transparent); box-shadow:0 0 0 2px color-mix(in oklab, var(--ok) 30%, transparent), var(--shadow)}
+    .choice.wrong{border-color: color-mix(in oklab, var(--bad) 40%, transparent); box-shadow:0 0 0 2px color-mix(in oklab, var(--bad) 30%, transparent), var(--shadow)}
+    .choice.disabled{opacity:.55; pointer-events:none}
+    .choice:focus-visible{box-shadow:0 0 0 3px color-mix(in oklab, var(--accent) 40%, transparent), var(--shadow)}
     .key{min-width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--paper);color:var(--accent);border:1px solid rgba(0,0,0,.06)}
     .result{margin-top:10px;padding:10px;border-radius:12px;border:2px dashed rgba(0,0,0,.12);display:none}
     .result.ok{border-color: color-mix(in oklab, var(--ok) 40%, transparent)}
@@ -45,18 +49,20 @@
     .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
     .item{background:var(--paper);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
     .hint{opacity:.85;font-size:.95rem}
+    .review{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+    .review-item{background:var(--paper);border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center}
   </style>
 </head>
 <body>
   <div class="app">
     <header>
       <div class="brand">
-        <div class="logo">単</div>
+        <div class="logo" aria-hidden="true">単</div>
         <div class="title">大家的日本語 N5｜L1–L4 單字小考（固定題庫）</div>
       </div>
       <div class="hud">
-        <div class="chip">分數 <span id="score">0</span></div>
-        <div class="chip">連對 <span id="streak">0</span></div>
+        <div class="chip" aria-live="polite">分數 <span id="score">0</span></div>
+        <div class="chip" aria-live="polite">連對 <span id="streak">0</span></div>
         <div class="chip" id="timeChip" style="display:none">⏱ <span id="timeLeft">60</span>s</div>
         <a href="index.html" class="home-link">🏠 回首頁</a>
       </div>
@@ -85,9 +91,11 @@
           <label class="pill"><input type="checkbox" id="tagCountry"> 國家</label>
           <label class="pill"><input type="checkbox" id="tagTime"> 時間類</label>
           <span class="pill"><input type="checkbox" id="onlyStar"> 只出 ⭐️ 星號單字</span>
+        
+        <div class="row">
+          <label class="pill"><input type="checkbox" id="hideKanji"> 隱藏漢字（只顯示假名）</label>
         </div>
-
-        <div class="title2">題數 & 限時</div>
+        $1
         <div class="row">
           <button class="pill" data-q="10">10 題</button>
           <button class="pill" data-q="20">20 題</button>
@@ -131,6 +139,8 @@
         <div class="title2">完成！</div>
         <div>分數：<b id="finalScore">0</b> ／ 題數：<b id="finalTotal">0</b></div>
         <div>最佳連對：<b id="finalStreak">0</b></div>
+        <div class="title2" style="margin-top:10px">錯題總覽</div>
+        <div id="reviewList" class="review"></div>
         <div class="row" style="margin-top:8px">
           <button class="btn" id="retryWrong" disabled>錯題重練 ▶</button>
           <button class="ghost" id="restart">回到設定頁</button>
@@ -148,15 +158,31 @@
 
   <script>
     const T = { SUFFIX:"接尾詞", COUNTRY:"國家", TIME:"時間" };
+
+    // 解析：更強韌，抓「最後一對」全形/半形括號，避免資料內部還有( ) 造成干擾
     function parseKanjiKanaFlexible(jp){
-      let m = jp.match(/^(.*)（(.*)）$/);
-      if(m){ return {kana:m[1], kanji:m[2]} }
-      m = jp.match(/^(.*)\((.*)\)$/);
-      if(m){ return {kana:m[1], kanji:m[2]} }
-      return {kana:jp, kanji:jp};
+      // 去除首尾空白
+      const s = jp.trim();
+      const openIdx = Math.max(s.lastIndexOf('（'), s.lastIndexOf('('));
+      const closeIdx = Math.max(s.lastIndexOf('）'), s.lastIndexOf(')'));
+      if(openIdx > -1 && closeIdx > openIdx){
+        const left = s.slice(0, openIdx).trim();
+        let inner = s.slice(openIdx + 1, closeIdx).trim();
+        // 若內部又包了一層半形括號，剝掉
+        if(inner.startsWith('(') && inner.endsWith(')')) inner = inner.slice(1, -1).trim();
+        // 預設左邊為假名、右邊為漢字；若左邊含漢字而右邊全假名，對調
+        const kanaCandidate = left || s; // 沒有左半就當整串
+        const kanjiCandidate = inner || left; // 內部可能空
+        const hasKanji = /[一-龯々〇]/.test(kanjiCandidate);
+        const leftHasKanji = /[一-龯々〇]/.test(kanaCandidate);
+        return leftHasKanji && !hasKanji
+          ? { kana: inner || s, kanji: left }
+          : { kana: kanaCandidate || s, kanji: inner || left || s };
+      }
+      return { kana:s, kanji:s };
     }
 
-    // === 題庫（完全照你的第一份，未改任何字詞）===
+    // === 題庫（維持你給的內容，不改字詞）===
     const L1_RAW = [
       ["わたし","我",[]],["あなた","你、您",[]],["あのひと（あの人）","他、她、那個人",[]],["あのかた（あの方）","「あの人」的禮貌說法",[]],
       ["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜ちゃん","代替「〜さん」，接在小孩子名字後（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
@@ -232,22 +258,66 @@
     let wrongSet = [];
     let starSet = new Set(JSON.parse(localStorage.getItem("minna_L1_4_stars")||"[]"));
     let acceptingAnswer = false;
+    let hideKanji = false;
 
     const $ = (s, r=document)=>r.querySelector(s);
+    function showJP(w){
+      return (hideKanji && w.kana && w.kanji && w.kanji!==w.kana) ? w.kana : w.jp;
+    }
+    function formatEntry(w){
+      if(hideKanji && w.kana && w.kanji && w.kanji!==w.kana) return w.kana;
+      return (w.kanji && w.kana && w.kanji!==w.kana ? `${w.kana}（${w.kanji}）` : w.jp);
+    }
     function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
     function sample(arr, n){ const a = arr.slice(); shuffle(a); return a.slice(0, n); }
+
+    // ========== 設定持久化 ==========
+    const SETTINGS_KEY = 'minna_L1_4_settings';
+    const defaultSettings = { mode: 'jp2zh', useL1:true,useL2:true,useL3:true,useL4:true, tagSuffix:false,tagCountry:false,tagTime:false, onlyStar:false, totalQ:10, timed:false, byLesson:false, hideKanji:false };
+    function saveSettings(){
+      const s = {
+        mode: document.querySelector('input[name="mode"]:checked').value,
+        useL1: $('#useL1').checked, useL2: $('#useL2').checked, useL3: $('#useL3').checked, useL4: $('#useL4').checked,
+        tagSuffix: $('#tagSuffix').checked, tagCountry: $('#tagCountry').checked, tagTime: $('#tagTime').checked,
+        onlyStar: $('#onlyStar').checked, totalQ, timed: $('#timed').checked, byLesson: $('#byLesson').checked,
+        hideKanji: $('#hideKanji').checked
+      };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    }
+    function loadSettings(){
+      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null') || defaultSettings;
+      document.querySelector(`input[name="mode"][value="${s.mode}"]`).checked = true;
+      $('#useL1').checked = s.useL1; $('#useL2').checked = s.useL2; $('#useL3').checked = s.useL3; $('#useL4').checked = s.useL4;
+      $('#tagSuffix').checked = s.tagSuffix; $('#tagCountry').checked = s.tagCountry; $('#tagTime').checked = s.tagTime;
+      $('#onlyStar').checked = s.onlyStar; $('#timed').checked = s.timed; $('#byLesson').checked = s.byLesson;
+      totalQ = s.totalQ; $('#qcount').textContent = `目前：${totalQ} 題`;
+      $('#hideKanji').checked = !!s.hideKanji; hideKanji = !!s.hideKanji;
+    }
 
     function renderBank(target, data){
       target.innerHTML = "";
       data.forEach(w=>{
         const d = document.createElement("div");
         d.className = "item";
-        const jk = (w.kanji && w.kana && w.kanji!==w.kana ? `${w.kana}（${w.kanji}）` : w.jp);
+        const jk = formatEntry(w);
         const btn = document.createElement("button");
         btn.className = "starbtn";
         btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆";
         if(starSet.has(w.id)) btn.classList.add("star-on");
-        btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); };
+        btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); saveSettings(); };
+        const left = document.createElement("div");
+        left.innerHTML = `<div style="font-weight:900">${jk}</div><div>${w.zh}</div><div class="pill">${w.l}${w.tags.length? "｜"+w.tags.join("・"):""}</div>`;
+        d.appendChild(left); d.appendChild(btn);
+        target.appendChild(d);
+      });
+    }（${w.kanji}）` : w.jp);
+        const btn = document.createElement("button");
+        btn.className = "starbtn";
+        btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆";
+        if(starSet.has(w.id)) btn.classList.add("star-on");
+        btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); saveSettings(); };
         const left = document.createElement("div");
         left.innerHTML = `<div style="font-weight:900">${jk}</div><div>${w.zh}</div><div class="pill">${w.l}${w.tags.length? "｜"+w.tags.join("・"):""}</div>`;
         d.appendChild(left); d.appendChild(btn);
@@ -258,18 +328,29 @@
       if(starSet.has(id)) starSet.delete(id); else starSet.add(id);
       localStorage.setItem("minna_L1_4_stars", JSON.stringify([...starSet]));
     }
-    renderBank(document.getElementById("bankL1"), L1);
-    renderBank(document.getElementById("bankL2"), L2);
-    renderBank(document.getElementById("bankL3"), L3);
-    renderBank(document.getElementById("bankL4"), L4);
+
+    function renderAllBanks(){
+      renderBank(document.getElementById("bankL1"), L1);
+      renderBank(document.getElementById("bankL2"), L2);
+      renderBank(document.getElementById("bankL3"), L3);
+      renderBank(document.getElementById("bankL4"), L4);
+    }
 
     document.querySelectorAll('[data-q]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; });
+      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; saveSettings(); });
     });
     document.getElementById("startBtn").addEventListener("click", startQuiz);
     document.getElementById("speakBtn").addEventListener("click", speakPrompt);
     document.getElementById("restart").addEventListener("click", ()=>{ document.getElementById("summary").style.display="none"; document.getElementById("setup").style.display="block" });
     document.getElementById("retryWrong").addEventListener("click", retryWrongOnly);
+
+    // 切換隱藏漢字時，立即重繪題庫清單
+    const hideBox = document.getElementById('hideKanji');
+    hideBox.addEventListener('change', ()=>{ hideKanji = hideBox.checked; saveSettings(); renderAllBanks(); });
+
+    // 初始載入：還原設定 + 題庫渲染
+    loadSettings();
+    renderAllBanks();
 
     function buildPool(){
       const use1 = document.getElementById("useL1").checked;
@@ -321,6 +402,7 @@
     }
 
     function startQuiz(){
+      saveSettings();
       mode = document.querySelector('input[name="mode"]:checked').value;
       fullPool = buildPool();
 
@@ -364,36 +446,41 @@
 
       if(mode==="kanji2kana"){
         const prompt = q.kanji || q.jp;
-        const distractors = sample(ALL.filter(w=> w.kana!==q.kana), 2);
-        const opts = shuffle([q, ...distractors]);
+        const distractors = uniqueTexts(sample(ALL.filter(w=> w.kana!==q.kana), 6).map(w=>w.kana)).slice(0,2);
+        const opts = shuffle([q.kana, ...distractors]);
         document.getElementById("qtext").innerHTML = prompt + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.kana), q.kana, q);
+        renderChoices(opts, q.kana, q);
         document.getElementById("choices").dataset.prompt = q.kana;
       } else if(mode==="jp2zh"){
-        const distractors = sample(ALL.filter(w=> w.zh!==q.zh), 2);
-        const opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = q.jp + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.zh), q.zh, q);
-        document.getElementById("choices").dataset.prompt = q.jp;
+        const distractors = uniqueTexts(sample(ALL.filter(w=> w.zh!==q.zh), 6).map(w=>w.zh)).slice(0,2);
+        const opts = shuffle([q.zh, ...distractors]);
+        document.getElementById("qtext").innerHTML = showJP(q) + " " + starBtnHTML;
+        renderChoices(opts, q.zh, q);
+        document.getElementById("choices").dataset.prompt = showJP(q);
       } else {
-        const distractors = sample(ALL.filter(w=> w.jp!==q.jp), 2);
-        const opts = shuffle([q, ...distractors]);
+        const distractorsObjs = sample(ALL.filter(w=> w.jp!==q.jp), 6).slice(0,2);
+        const opts = shuffle([q, ...distractorsObjs]).map(o=> showJP(o));
+        const correctShown = showJP(q);
         document.getElementById("qtext").innerHTML = q.zh + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.jp), q.jp, q);
-        document.getElementById("choices").dataset.prompt = q.jp;
+        renderChoices(opts, correctShown, q);
+        document.getElementById("choices").dataset.prompt = correctShown;
       }
 
       const starBtn = document.getElementById("starQBtn");
-      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
+      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); saveSettings(); };
 
       document.getElementById("nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+    }
+
+    function uniqueTexts(arr){
+      return [...new Set(arr)];
     }
 
     function renderChoices(texts, correctText, qobj){
       const choices = document.getElementById("choices"); choices.innerHTML="";
       texts.forEach((txt, idx)=>{
-        const div = document.createElement("div");
-        div.className="choice";
+        const div = document.createElement("button");
+        div.className="choice"; div.type='button'; div.setAttribute('aria-label', `選項 ${idx+1}`);
         div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
         div.addEventListener("click", ()=>onChoose(div, txt, correctText, qobj));
         choices.appendChild(div);
@@ -428,11 +515,13 @@
         box.classList.remove("bad"); box.classList.add("ok");
         head.textContent = "✅ 正確！";
         if(timed) addBonusSeconds(3);
+        if(navigator.vibrate) navigator.vibrate(40);
       }else{
         streak=0; document.getElementById("streak").textContent = streak;
         box.classList.remove("ok"); box.classList.add("bad");
         head.textContent = "❌ 答錯了";
         wrongSet.push(q);
+        if(navigator.vibrate) navigator.vibrate([30, 40, 30]);
       }
 
       if(mode==="kanji2kana"){
@@ -460,7 +549,32 @@
       document.getElementById("timeChip").style.display = "none";
       const btn = document.getElementById("retryWrong");
       btn.disabled = wrongSet.length===0;
+      renderReview();
       if(timeUp){ alert("時間到！看看這回合成績～"); }
+    }
+
+    function renderReview(){
+      const list = document.getElementById('reviewList');
+      list.innerHTML = '';
+      if(wrongSet.length===0){
+        list.innerHTML = '<div class="hint">本回合沒有錯題，太讚啦！</div>';
+        return;
+      }
+      const seen = new Map();
+      wrongSet.forEach(w=>{ if(!seen.has(w.id)) seen.set(w.id, w); });
+      seen.forEach(w=>{
+        const row = document.createElement('div');
+        row.className='review-item';
+        const jk = formatEntry(w);
+        row.innerHTML = `<div><b>${jk}</b>｜${w.zh} <span class="pill" style="margin-left:6px">${w.l}</span></div>`;
+        const star = document.createElement('button');
+        star.className='starbtn';
+        star.innerHTML = starSet.has(w.id)?'⭐️':'☆';
+        if(starSet.has(w.id)) star.classList.add('star-on');
+        star.onclick=()=>{ toggleStar(w.id); star.innerHTML = starSet.has(w.id)?'⭐️':'☆'; star.classList.toggle('star-on', starSet.has(w.id)); };
+        row.appendChild(star);
+        list.appendChild(row);
+      });
     }
 
     function retryWrongOnly(){
@@ -478,9 +592,11 @@
     }
 
     function speakPrompt(){
-      const utter = new SpeechSynthesisUtterance(document.getElementById("choices").dataset.prompt || "");
+      const text = document.getElementById("choices").dataset.prompt || "";
+      if(!text) return;
+      const utter = new SpeechSynthesisUtterance(text);
       utter.lang = "ja-JP";
-      speechSynthesis.stop();
+      speechSynthesis.cancel();
       speechSynthesis.speak(utter);
     }
 
@@ -495,5 +611,8 @@
       }
     });
   </script>
+</body>
+</html>
+
 </body>
 </html>
