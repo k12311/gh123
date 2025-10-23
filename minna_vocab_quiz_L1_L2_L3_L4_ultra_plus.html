@@ -31,8 +31,8 @@
     .qtext{display:flex;align-items:center;gap:10px;font-size:1.6rem;font-weight:900;line-height:1.6;word-break:keep-all}
     .starbtn{border:0;background:transparent;font-size:1.4rem;cursor:pointer}
     .star-on{color:#f4b400;filter:drop-shadow(0 1px 0 rgba(0,0,0,.2))}
-    .choices{display:grid;grid-template-columns:1fr;gap:10px}
-    .choice{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 12px;font-size:1.1rem;font-weight:800;box-shadow:var(--shadow);outline:none}
+    .choices{display:grid;grid-template-columns:1fr;gap:10px; position:relative; z-index:1; pointer-events:auto}
+    .choice{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 12px;font-size:1.1rem;font-weight:800;box-shadow:var(--shadow);outline:none;cursor:pointer;pointer-events:auto; user-select:none; z-index:2}
     .choice:active{transform:scale(.99)}
     .choice.correct{border-color: color-mix(in oklab, var(--ok) 40%, transparent); box-shadow:0 0 0 2px color-mix(in oklab, var(--ok) 30%, transparent), var(--shadow)}
     .choice.wrong{border-color: color-mix(in oklab, var(--bad) 40%, transparent); box-shadow:0 0 0 2px color-mix(in oklab, var(--bad) 30%, transparent), var(--shadow)}
@@ -106,7 +106,7 @@
           <label class="pill"><input type="checkbox" id="byLesson"> 依課次順序（關閉＝隨機混合）</label>
         </div>
 
-        <details>
+        <details open>
           <summary>題庫一覽（可直接加星）</summary>
           <div class="title2" style="margin-top:6px">L1</div>
           <div class="list" id="bankL1"></div>
@@ -259,6 +259,7 @@
     let starSet = new Set(JSON.parse(localStorage.getItem("minna_L1_4_stars")||"[]"));
     let acceptingAnswer = false;
     let hideKanji = false;
+    let currentQ = null;
 
     const $ = (s, r=document)=>r.querySelector(s);
     function showJP(w){
@@ -297,6 +298,7 @@
     }
 
     function renderBank(target, data){
+      if(!target) return;
       target.innerHTML = "";
       data.forEach(w=>{
         const d = document.createElement("div");
@@ -344,13 +346,22 @@
     document.getElementById("restart").addEventListener("click", ()=>{ document.getElementById("summary").style.display="none"; document.getElementById("setup").style.display="block" });
     document.getElementById("retryWrong").addEventListener("click", retryWrongOnly);
 
+    // 事件委派（再保險）：若個別監聽失效，容器仍可抓點擊
+    document.getElementById('choices').addEventListener('click', (e)=>{
+      if(!acceptingAnswer) return;
+      const node = e.target.closest('.choice');
+      if(!node) return;
+      const chosenText = node.querySelector('.text')?.textContent || '';
+      const correctText = document.getElementById('choices').dataset.correct || '';
+      onChoose(node, chosenText, correctText, currentQ);
+    }, true); // capture 階段先攔住
+
     // 切換隱藏漢字時，立即重繪題庫清單
     const hideBox = document.getElementById('hideKanji');
     hideBox.addEventListener('change', ()=>{ hideKanji = hideBox.checked; saveSettings(); renderAllBanks(); });
 
-    // 初始載入：還原設定 + 題庫渲染
-    loadSettings();
-    renderAllBanks();
+    // 初始載入：還原設定 + 題庫渲染（等 DOMReady 再執行，避免掛載不到節點）
+    document.addEventListener('DOMContentLoaded', ()=>{ loadSettings(); renderAllBanks(); });
 
     function buildPool(){
       const use1 = document.getElementById("useL1").checked;
@@ -449,12 +460,14 @@
         const distractors = uniqueTexts(sample(ALL.filter(w=> w.kana!==q.kana), 6).map(w=>w.kana)).slice(0,2);
         const opts = shuffle([q.kana, ...distractors]);
         document.getElementById("qtext").innerHTML = prompt + " " + starBtnHTML;
+        currentQ = q;
         renderChoices(opts, q.kana, q);
         document.getElementById("choices").dataset.prompt = q.kana;
       } else if(mode==="jp2zh"){
         const distractors = uniqueTexts(sample(ALL.filter(w=> w.zh!==q.zh), 6).map(w=>w.zh)).slice(0,2);
         const opts = shuffle([q.zh, ...distractors]);
         document.getElementById("qtext").innerHTML = showJP(q) + " " + starBtnHTML;
+        currentQ = q;
         renderChoices(opts, q.zh, q);
         document.getElementById("choices").dataset.prompt = showJP(q);
       } else {
@@ -462,6 +475,7 @@
         const opts = shuffle([q, ...distractorsObjs]).map(o=> showJP(o));
         const correctShown = showJP(q);
         document.getElementById("qtext").innerHTML = q.zh + " " + starBtnHTML;
+        currentQ = q;
         renderChoices(opts, correctShown, q);
         document.getElementById("choices").dataset.prompt = correctShown;
       }
@@ -478,9 +492,19 @@
 
     function renderChoices(texts, correctText, qobj){
       const choices = document.getElementById("choices"); choices.innerHTML="";
+      choices.dataset.correct = correctText;
       texts.forEach((txt, idx)=>{
         const div = document.createElement("button");
         div.className="choice"; div.type='button'; div.setAttribute('aria-label', `選項 ${idx+1}`);
+        div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
+        // 個別監聽（保險）
+        div.addEventListener("click", ()=>onChoose(div, txt, correctText, qobj));
+        choices.appendChild(div);
+        // 觸控/指標後援
+        div.addEventListener('pointerup', ()=>onChoose(div, txt, correctText, qobj));
+        div.addEventListener('touchend', ()=>onChoose(div, txt, correctText, qobj), {passive:true});
+      });
+    }`);
         div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
         div.addEventListener("click", ()=>onChoose(div, txt, correctText, qobj));
         choices.appendChild(div);
