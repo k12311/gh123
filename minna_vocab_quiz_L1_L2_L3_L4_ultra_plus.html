@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
@@ -97,6 +97,7 @@
           <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
           <label class="pill"><input type="checkbox" id="byLesson"> 依課次順序（關閉＝隨機混合）</label>
           <label class="pill"><input type="checkbox" id="katakanaOnly"> 只顯示片假名</label>
+          <label class="pill"><input type="checkbox" id="showKanji" checked> 顯示漢字</label>
           <label class="pill"><input type="checkbox" id="kanjiOptions"> ZH→JP 選項用「漢字」</label>
         </div>
 
@@ -161,19 +162,36 @@
     const $ = (sel, root=document) => root.querySelector(sel);
     const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
 
+    // ---- 偏好儲存鍵 ----
+    const PREF_KEY = 'n5_l1_4_prefs_v1';
+    const STAR_KEY = 'n5_fixed_bank_stars_v1';
+
+    // ---- 解析工具 ----
     function parseKanjiKanaFlexible(jp){
       let m = jp.match(/^(.*)（(.*)）$/);
       if(m){ return {kana:m[1], kanji:m[2]} }
-      m = jp.match(/^(.*)\\((.*)\\)$/);
+      m = jp.match(/^(.*)\((.*)\)$/);
       if(m){ return {kana:m[1], kanji:m[2]} }
       return {kana:jp, kanji:jp};
     }
+    function hiraToKata(str){ return str.replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0)+0x60)); }
+    function toKatakanaIf(s,on){ return on ? hiraToKata(s) : s; }
 
-    function hiraToKata(str){
-      return str.replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60));
+    // ---- 顯示工具 ----
+    function displayKana(word, katakanaOn){
+      const k = word.kana || word.jp;
+      return katakanaOn ? hiraToKata(k) : k;
     }
-    function toKatakanaIf(s, on){ return on ? hiraToKata(s) : s; }
+    function displayJP(word, showKanji, katakanaOn){
+      if(!showKanji){ return displayKana(word, katakanaOn); }
+      if(word.kanji && word.kana && word.kanji!==word.kana){
+        return `${displayKana(word, katakanaOn)}（${word.kanji}）`;
+      }
+      const s = word.jp || word.kana;
+      return katakanaOn ? hiraToKata(s) : s;
+    }
 
+    // ---- 題庫 ----
     const L1_RAW = [
       ["わたし","我",[]],["あなた","你、您",[]],["あのひと（あの人）","他、她、那個人",[]],["あのかた（あの方）","「あの人」的禮貌說法",[]],
       ["〜さん","〜先生、〜小姐、〜女士（接尾）",[T.SUFFIX]],["〜ちゃん","代替「〜さん」，接在小孩子名字後（接尾）",[T.SUFFIX]],["〜じん","〜人（表示國籍的接尾詞）",[T.SUFFIX]],
@@ -230,11 +248,12 @@
     }
     const BANK_ALL = [...normalize(L1_RAW,'L1'),...normalize(L2_RAW,'L2'),...normalize(L3_RAW,'L3'),...normalize(L4_RAW,'L4')];
 
-    const STAR_KEY='n5_fixed_bank_stars_v1';
+    // ---- 星號收藏 ----
     const starSet=new Set(JSON.parse(localStorage.getItem(STAR_KEY)||'[]'));
     function saveStars(){ localStorage.setItem(STAR_KEY, JSON.stringify([...starSet])); }
     function isStarred(item){ return starSet.has(item.jp+'|'+item.zh); }
 
+    // ---- DOM ----
     const els = {
       setup:$('#setup'), quiz:$('#quiz'), summary:$('#summary'),
       qtext:$('#qtext'), choices:$('#choices'), nextBtn:$('#nextBtn'), speakBtn:$('#speakBtn'),
@@ -248,35 +267,59 @@
       useL1:$('#useL1'), useL2:$('#useL2'), useL3:$('#useL3'), useL4:$('#useL4'),
       tagSuffix:$('#tagSuffix'), tagCountry:$('#tagCountry'), tagTime:$('#tagTime'),
       onlyStar:$('#onlyStar'), byLesson:$('#byLesson'), timed:$('#timed'),
-      katakanaOnly:$('#katakanaOnly'), kanjiOptions:$('#kanjiOptions'),
+      katakanaOnly:$('#katakanaOnly'), showKanji:$('#showKanji'), kanjiOptions:$('#kanjiOptions'),
       bankL1:$('#bankL1'), bankL2:$('#bankL2'), bankL3:$('#bankL3'), bankL4:$('#bankL4'),
     };
 
+    // ---- 狀態 ----
     const S={mode:'jp2zh', total:10, idx:0, score:0, streak:0, bestStreak:0, questions:[], wrongPool:[], timeLeft:60, timerId:null, running:false};
 
-    // 題庫清單（僅在 Start/Restart 時同步設定）
-    function toKatakanaIf(s, on){ return on ? hiraToKata(s) : s; }
-    function renderBankList(container, items, flags){
-      const { katakanaOnly, kanjiOptions } = flags;
+    // ---- 偏好存取 ----
+    function savePrefs(){
+      const prefs = {
+        // 範圍
+        useL1:els.useL1.checked, useL2:els.useL2.checked, useL3:els.useL3.checked, useL4:els.useL4.checked,
+        // 標籤
+        tagSuffix:els.tagSuffix.checked, tagCountry:els.tagCountry.checked, tagTime:els.tagTime.checked, onlyStar:els.onlyStar.checked,
+        // 顯示
+        timed:els.timed.checked, byLesson:els.byLesson.checked, katakanaOnly:els.katakanaOnly.checked, showKanji:els.showKanji.checked, kanjiOptions:els.kanjiOptions.checked,
+        // 其他
+        total:S.total, mode:S.mode
+      };
+      localStorage.setItem(PREF_KEY, JSON.stringify(prefs));
+    }
+    function loadPrefs(){
+      try{
+        const raw = localStorage.getItem(PREF_KEY);
+        if(!raw) return;
+        const p = JSON.parse(raw);
+        // 套用 checkbox
+        ['useL1','useL2','useL3','useL4','tagSuffix','tagCountry','tagTime','onlyStar','timed','byLesson','katakanaOnly','showKanji','kanjiOptions'].forEach(k=>{
+          if(typeof p[k]==='boolean'){ els[k].checked = p[k]; }
+        });
+        if(typeof p.total==='number'){ S.total=p.total; els.qcount.textContent=`目前：${S.total} 題`; }
+        if(typeof p.mode==='string'){ S.mode=p.mode; const r=document.querySelector(`input[name="mode"][value="${S.mode}"]`); if(r) r.checked=true; }
+      }catch(e){}
+    }
+
+    // ---- 題庫清單（顯示）----
+    function renderBankList(container, items){
+      const katakanaOnly = els.katakanaOnly.checked;
+      const showKanji = els.showKanji.checked;
       container.innerHTML='';
       items.forEach(item=>{
         const id=item.jp+'|'+item.zh;
         const div=document.createElement('div'); div.className='item';
         const left=document.createElement('div'); left.style.display='grid'; left.style.gap='2px';
 
-        const mainRaw = (kanjiOptions && item.kanji) ? item.kanji : item.jp;
-        const mainShown = toKatakanaIf(mainRaw, katakanaOnly);
-        const top=document.createElement('div'); top.style.fontWeight='900'; top.textContent=mainShown;
+        const top=document.createElement('div'); top.style.fontWeight='900';
+        top.textContent = displayJP(item, showKanji, katakanaOnly);
 
         const mid=document.createElement('div'); mid.className='hint'; mid.textContent=`中文：${item.zh}`;
 
         const tag=document.createElement('div'); tag.className='hint';
-        if(kanjiOptions){
-          tag.textContent = `讀音：${toKatakanaIf(item.kana, katakanaOnly)}` + (item.kanji!==item.kana ? `／漢字：${item.kanji}` : '');
-        }else{
-          if(item.kanji!==item.kana){ tag.textContent=`讀音：${toKatakanaIf(item.kana, katakanaOnly)}／漢字：${item.kanji}`; }
-          else { tag.textContent = `讀音：${toKatakanaIf(item.kana, katakanaOnly)}`; }
-        }
+        if(item.kanji!==item.kana){ tag.textContent=`讀音：${toKatakanaIf(item.kana, katakanaOnly)}／漢字：${item.kanji}`; }
+        else { tag.textContent=`讀音：${toKatakanaIf(item.kana, katakanaOnly)}`; }
 
         left.append(top, mid, tag);
 
@@ -287,20 +330,13 @@
       });
     }
     function renderBankListsWithSettings(){
-      const flags = { katakanaOnly: els.katakanaOnly.checked, kanjiOptions: els.kanjiOptions.checked };
-      renderBankList(els.bankL1, BANK_ALL.filter(x=>x.lesson==='L1'), flags);
-      renderBankList(els.bankL2, BANK_ALL.filter(x=>x.lesson==='L2'), flags);
-      renderBankList(els.bankL3, BANK_ALL.filter(x=>x.lesson==='L3'), flags);
-      renderBankList(els.bankL4, BANK_ALL.filter(x=>x.lesson==='L4'), flags);
-    }
-    function initBankListsDefault(){
-      const flags = { katakanaOnly:false, kanjiOptions:false };
-      renderBankList(els.bankL1, BANK_ALL.filter(x=>x.lesson==='L1'), flags);
-      renderBankList(els.bankL2, BANK_ALL.filter(x=>x.lesson==='L2'), flags);
-      renderBankList(els.bankL3, BANK_ALL.filter(x=>x.lesson==='L3'), flags);
-      renderBankList(els.bankL4, BANK_ALL.filter(x=>x.lesson==='L4'), flags);
+      renderBankList(els.bankL1, BANK_ALL.filter(x=>x.lesson==='L1'));
+      renderBankList(els.bankL2, BANK_ALL.filter(x=>x.lesson==='L2'));
+      renderBankList(els.bankL3, BANK_ALL.filter(x=>x.lesson==='L3'));
+      renderBankList(els.bankL4, BANK_ALL.filter(x=>x.lesson==='L4'));
     }
 
+    // ---- 工具 ----
     function sample(arr,n){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a.slice(0,n); }
     function shuffle(arr){ return sample(arr, arr.length); }
 
@@ -311,45 +347,72 @@
         if(!use.has(it.lesson)) return false;
         if(onlyStar && !isStarred(it)) return false;
         const any=wantS||wantC||wantT;
-        if(any){ const set=new Set(it.tags); if(wantS&&set.has(T.SUFFIX)) return true; if(wantC&&set.has(T.COUNTRY)) return true; if(wantT&&set.has(T.TIME)) return true; return false; }
+        if(any){
+          const set=new Set(it.tags);
+          if(wantS&&set.has(T.SUFFIX)) return true;
+          if(wantC&&set.has(T.COUNTRY)) return true;
+          if(wantT&&set.has(T.TIME)) return true;
+          return false;
+        }
         return true;
       });
     }
 
-    function toKatakanaIfRuntime(s){ return els.katakanaOnly?.checked ? hiraToKata(s) : s; }
-
+    // ---- 出題 ----
     function buildQuestionPool(){
       const pool=getFilteredBank(); if(pool.length===0) return [];
       const picked = els.byLesson.checked
         ? ['L1','L2','L3','L4'].flatMap(L=>shuffle(pool.filter(x=>x.lesson===L))).slice(0,S.total)
         : sample(pool, Math.min(S.total, pool.length));
 
+      const katakanaOnly = els.katakanaOnly.checked;
+      const showKanji = els.showKanji.checked;
+      const useKanjiOptions = els.kanjiOptions.checked;
+
       return picked.map(item=>{
         let prompt, answer, candField;
+
         if(S.mode==='jp2zh'){
-          prompt=item.jp; answer=item.zh; candField='zh'; prompt=toKatakanaIfRuntime(prompt);
+          prompt = displayJP(item, showKanji, katakanaOnly);
+          answer = item.zh; candField='zh';
         }else if(S.mode==='zh2jp'){
-          const useKanji = els.kanjiOptions.checked;
-          prompt=item.zh; candField = useKanji ? 'kanji' : 'jp';
-          answer=item[candField];
-          if(candField==='jp') answer=toKatakanaIfRuntime(answer);
-        }else{
-          prompt=(item.kanji===item.kana)? item.jp:item.kanji;
-          candField='kana'; answer=toKatakanaIfRuntime(item.kana);
+          prompt = item.zh;
+          if(useKanjiOptions && item.kanji){
+            candField='kanji'; answer=item.kanji;
+          }else{
+            candField='jp'; answer=displayJP(item, showKanji, katakanaOnly);
+          }
+        }else{ // kanji2kana
+          prompt = (item.kanji===item.kana)? item.jp : item.kanji;
+          candField='kana'; answer = toKatakanaIf(item.kana, katakanaOnly);
         }
-        let distractors = sample(pool.filter(x=>x!==item).map(x=>x[candField]), 3);
-        if(candField==='jp' || candField==='kana'){ distractors = distractors.map(toKatakanaIfRuntime); }
+
+        let distractorsRaw = pool.filter(x=>x!==item).map(x=>{
+          if(candField==='zh') return x.zh;
+          if(candField==='kanji') return x.kanji || x.jp;
+          if(candField==='jp') return displayJP(x, showKanji, katakanaOnly);
+          return toKatakanaIf(x.kana, katakanaOnly);
+        }).filter(Boolean);
+
+        const distractors = sample(distractorsRaw, 3);
         const options = shuffle([answer, ...distractors]);
         return {item, prompt, answer, options, candField};
       });
     }
 
+    // ---- 語音 ----
     function speak(text, lang='ja-JP'){
-      try{ window.speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text);
-        const v=window.speechSynthesis.getVoices(); const jp=v.find(x=>x.lang.startsWith('ja'))||v[0]; if(jp) u.voice=jp; u.lang=lang; window.speechSynthesis.speak(u);
+      try{
+        window.speechSynthesis.cancel();
+        const u=new SpeechSynthesisUtterance(text);
+        const v=window.speechSynthesis.getVoices();
+        const jp=v.find(x=>x.lang && x.lang.startsWith('ja'))||v[0];
+        if(jp) u.voice=jp; u.lang=lang;
+        window.speechSynthesis.speak(u);
       }catch(e){}
     }
 
+    // ---- HUD/渲染 ----
     function updateHud(){
       els.score.textContent=S.score; els.streak.textContent=S.streak; els.bar.style.width=`${(S.idx/S.total)*100}%`;
       els.modeTag.textContent = (S.mode==='jp2zh'?'JP→ZH': S.mode==='zh2jp'?'ZH→JP':'漢→仮');
@@ -369,6 +432,22 @@
       updateHud();
     }
 
+    function displayAnswerExplain(q, brief=false){
+      const it=q.item; const katakanaOnly = els.katakanaOnly.checked; const showKanji = els.showKanji.checked;
+      if(q.candField==='zh'){
+        const jpShown=displayJP(it, showKanji, katakanaOnly); return brief? it.zh : `${it.zh}（${jpShown}）`;
+      }else if(q.candField==='jp'){
+        const jpShown=displayJP(it, showKanji, katakanaOnly); if(brief) return jpShown;
+        const kanaShown=toKatakanaIf(it.kana, katakanaOnly);
+        return (it.kanji!==it.kana) ? `${jpShown}（中文：${it.zh}｜讀音：${kanaShown}）` : `${jpShown}（中文：${it.zh}）`;
+      }else if(q.candField==='kanji'){
+        const kanjiShown=it.kanji||it.jp; if(brief) return kanjiShown;
+        return `${kanjiShown}（讀音：${toKatakanaIf(it.kana, katakanaOnly)}／中文：${it.zh}）`;
+      }else{
+        const kanaShown=toKatakanaIf(it.kana, katakanaOnly); return brief? `${kanaShown}` : `${kanaShown}（漢字：${it.kanji}／中文：${it.zh}）`;
+      }
+    }
+
     function onChoose(opt){
       if(!S.running) return;
       const q=S.questions[S.idx]; const correct=(opt===q.answer);
@@ -385,62 +464,76 @@
       els.nextBtn.disabled=false; updateHud();
     }
 
-    function displayAnswerExplain(q, brief=false){
-      const it=q.item; const K=s=>toKatakanaIfRuntime(s);
-      if(q.candField==='zh'){
-        const jpShown=K(it.jp); return brief? it.zh : `${it.zh}（${jpShown}）`;
-      }else if(q.candField==='jp'){
-        const jpShown=K(it.jp); if(brief) return jpShown;
-        const kanaShown=K(it.kana);
-        return (it.kanji!==it.kana) ? `${jpShown}（中文：${it.zh}｜讀音：${kanaShown}）` : `${jpShown}（中文：${it.zh}）`;
-      }else if(q.candField==='kanji'){
-        const kanjiShown=it.kanji; if(brief) return kanjiShown;
-        return `${kanjiShown}（讀音：${K(it.kana)}／中文：${it.zh}）`;
-      }else{
-        const kanaShown=K(it.kana); return brief? `${kanaShown}` : `${kanaShown}（漢字：${it.kanji}／中文：${it.zh}）`;
-      }
-    }
-
     function nextQuestion(){ S.idx++; if(S.idx>=S.total){ endQuiz(); } else { renderQuestion(); } }
-    function startTimer(){ els.timeChip.style.display='inline-block'; S.timeLeft=60; els.timeLeft.textContent=S.timeLeft;
-      S.timerId=setInterval(()=>{ S.timeLeft--; els.timeLeft.textContent=S.timeLeft; if(S.timeLeft<=0){ clearInterval(S.timerId); endQuiz(); } },1000); }
+    function startTimer(){
+      els.timeChip.style.display='inline-block'; S.timeLeft=60; els.timeLeft.textContent=S.timeLeft;
+      S.timerId=setInterval(()=>{ S.timeLeft--; els.timeLeft.textContent=S.timeLeft; if(S.timeLeft<=0){ clearInterval(S.timerId); endQuiz(); } },1000);
+    }
     function stopTimer(){ els.timeChip.style.display='none'; if(S.timerId){ clearInterval(S.timerId); S.timerId=null; } }
     function endQuiz(){
       S.running=false; stopTimer(); els.quiz.style.display='none'; els.summary.style.display='block';
       els.finalScore.textContent=S.score; els.finalTotal.textContent=S.total; els.finalStreak.textContent=S.bestStreak;
       els.retryWrong.disabled=(S.wrongPool.length===0);
+      // 存一次分數相關無需，但存偏好（以防題數/模式更新）
+      savePrefs();
     }
 
-    $$('input[name="mode"]').forEach(r=> r.addEventListener('change',()=>{ S.mode=r.value; }));
-    $$('button[data-q]').forEach(btn=> btn.addEventListener('click',()=>{ S.total=Number(btn.dataset.q); els.qcount.textContent=`目前：${S.total} 題`; }));
+    // ---- 事件：模式/題數/顯示選項 ----
+    $$('input[name="mode"]').forEach(r=> r.addEventListener('change',()=>{ S.mode=r.value; savePrefs(); updateHud(); }));
+    $$('button[data-q]').forEach(btn=> btn.addEventListener('click',()=>{ S.total=Number(btn.dataset.q); els.qcount.textContent=`目前：${S.total} 題`; savePrefs(); }));
 
+    // 影響清單顯示的選項：即時更新＋存偏好
+    ['katakanaOnly','showKanji','kanjiOptions','useL1','useL2','useL3','useL4','tagSuffix','tagCountry','tagTime','onlyStar','byLesson','timed']
+      .forEach(id=>{ $('#'+id).addEventListener('change',()=>{ savePrefs(); renderBankListsWithSettings(); }); });
+
+    // ---- 開始／重來／錯題重練 ----
     els.startBtn.addEventListener('click',()=>{
-      // 僅在此時刷新清單顯示
-      renderBankListsWithSettings();
-
+      renderBankListsWithSettings(); // 同步一次清單顯示
       S.idx=0; S.score=0; S.streak=0; S.bestStreak=0; S.wrongPool=[];
-      S.mode=($('input[name="mode"]:checked')?.value)||'jp2zh';
+      S.mode=($('input[name="mode"]:checked')?.value)||S.mode;
       S.questions=buildQuestionPool();
-      if(S.questions.length===0){ alert('沒有符合篩選條件的題目。\\n請調整課次或標籤/星號篩選。'); return; }
+      if(S.questions.length===0){ alert('沒有符合篩選條件的題目。\n請調整課次或標籤/星號篩選。'); return; }
       S.total=Math.min(S.total,S.questions.length); S.running=true;
       els.setup.style.display='none'; els.summary.style.display='none'; els.quiz.style.display='block';
       els.nextBtn.disabled=true; updateHud(); renderQuestion();
       if(els.timed.checked) startTimer(); else stopTimer();
+      savePrefs();
     });
 
     els.nextBtn.addEventListener('click', nextQuestion);
-    els.restart.addEventListener('click',()=>{ stopTimer(); S.running=false; els.quiz.style.display='none'; els.summary.style.display='none'; els.setup.style.display='block'; renderBankListsWithSettings(); });
+
+    els.restart.addEventListener('click',()=>{
+      stopTimer(); S.running=false;
+      els.quiz.style.display='none'; els.summary.style.display='none'; els.setup.style.display='block';
+      renderBankListsWithSettings(); savePrefs();
+    });
+
     els.retryWrong.addEventListener('click',()=>{
       if(S.wrongPool.length===0) return;
       const tmp=S.wrongPool; S.wrongPool=[];
       S.idx=0; S.score=0; S.streak=0; S.bestStreak=0; S.mode=($('input[name="mode"]:checked')?.value)||S.mode;
+
+      const katakanaOnly = els.katakanaOnly.checked;
+      const showKanji = els.showKanji.checked;
+      const useKanjiOptions = els.kanjiOptions.checked;
+
       S.questions=tmp.map(item=>{
         let prompt, answer, candField;
-        if(S.mode==='jp2zh'){ prompt=toKatakanaIfRuntime(item.jp); answer=item.zh; candField='zh'; }
-        else if(S.mode==='zh2jp'){ const useKanji=els.kanjiOptions.checked; prompt=item.zh; candField=useKanji?'kanji':'jp'; answer=item[candField]; if(candField==='jp') answer=toKatakanaIfRuntime(answer); }
-        else { prompt=(item.kanji===item.kana)?item.jp:item.kanji; answer=toKatakanaIfRuntime(item.kana); candField='kana'; }
-        let distractors=sample(getFilteredBank().filter(x=>x!==item).map(x=>x[candField]),3);
-        if(candField==='jp'||candField==='kana'){ distractors=distractors.map(toKatakanaIfRuntime); }
+        if(S.mode==='jp2zh'){
+          prompt = displayJP(item, showKanji, katakanaOnly); answer=item.zh; candField='zh';
+        }else if(S.mode==='zh2jp'){
+          prompt=item.zh;
+          if(useKanjiOptions && item.kanji){ candField='kanji'; answer=item.kanji; }
+          else { candField='jp'; answer=displayJP(item, showKanji, katakanaOnly); }
+        }else{
+          prompt=(item.kanji===item.kana)?item.jp:item.kanji; answer=toKatakanaIf(item.kana, katakanaOnly); candField='kana';
+        }
+        let distractors=sample(getFilteredBank().filter(x=>x!==item).map(x=>{
+          if(candField==='zh') return x.zh;
+          if(candField==='kanji') return x.kanji || x.jp;
+          if(candField==='jp') return displayJP(x, showKanji, katakanaOnly);
+          return toKatakanaIf(x.kana, katakanaOnly);
+        }).filter(Boolean),3);
         const options=shuffle([answer,...distractors]);
         return {item,prompt,answer,options,candField};
       });
@@ -449,16 +542,34 @@
       if(els.timed.checked) startTimer(); else stopTimer(); renderQuestion();
     });
 
+    // ---- 朗讀 ----
     els.speakBtn.addEventListener('click',()=>{
-      const q=S.questions[S.idx]; if(S.mode==='kanji2kana') speak(q.item.kana); else speak(q.item.kana||q.item.jp);
+      const q=S.questions[S.idx]; // 朗讀用假名
+      speak(q.item.kana);
     });
 
-    document.addEventListener('keydown',(e)=>{ if(!S.running) return;
-      if(['1','2','3','4'].includes(e.key)){ const i=Number(e.key)-1; const btn=$$('.choice',els.choices)[i]; if(btn && !btn.disabled) btn.click(); }
-      else if(e.key==='Enter' && !els.nextBtn.disabled){ nextQuestion(); }
+    // ---- 鍵盤快捷鍵 ----
+    document.addEventListener('keydown',(e)=>{
+      if(els.quiz.style.display==='block' && S.running){
+        if(['1','2','3','4'].includes(e.key)){
+          const i=Number(e.key)-1; const btn=$$('.choice',els.choices)[i];
+          if(btn && !btn.disabled){ btn.click(); }
+        }else if(e.key==='Enter'){
+          if(!els.nextBtn.disabled){ nextQuestion(); }
+        }else if(e.key===' '){
+          e.preventDefault();
+          const q=S.questions[S.idx]; if(q){ speak(q.item.kana); }
+        }
+      }
     });
 
-    function onReady(){ initBankListsDefault(); }
+    // ---- 初始化 ----
+    function onReady(){
+      loadPrefs();
+      renderBankListsWithSettings();
+      // 題數按鈕也要同步文字
+      els.qcount.textContent=`目前：${S.total} 題`;
+    }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', onReady); else onReady();
   </script>
 </body>
