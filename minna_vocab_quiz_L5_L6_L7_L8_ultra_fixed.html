@@ -16,12 +16,7 @@
     .title{font-weight:900;color:var(--accent)}
     .hud{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .chip{background:var(--paper);padding:6px 10px;border-radius:999px;font-weight:900;box-shadow:var(--shadow)}
-    /* 回首頁按鈕樣式 */
-    .home-link{
-      text-decoration:none;background:#fff;color:var(--accent);
-      font-weight:900;border-radius:999px;padding:6px 12px;
-      box-shadow:inset 0 0 0 2px var(--accent);transition:background .1s
-    }
+    .home-link{ text-decoration:none;background:#fff;color:var(--accent); font-weight:900;border-radius:999px;padding:6px 12px; box-shadow:inset 0 0 0 2px var(--accent);transition:background .1s }
     .home-link:hover{background:var(--paper)}
     main{flex:1;padding:14px;display:flex}
     .card{margin:auto;width:min(1000px,100%);background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:18px;box-shadow:var(--shadow);padding:16px 14px}
@@ -50,6 +45,7 @@
     .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
     .item{background:var(--paper);padding:10px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
     .hint{opacity:.85;font-size:.95rem}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; background:#fff;border:1px solid rgba(0,0,0,.1);padding:2px 6px;border-radius:6px}
   </style>
 </head>
 <body>
@@ -63,7 +59,6 @@
         <div class="chip">分數 <span id="score">0</span></div>
         <div class="chip">連對 <span id="streak">0</span></div>
         <div class="chip" id="timeChip" style="display:none">⏱ <span id="timeLeft">60</span>s</div>
-        <!-- 新增回首頁 -->
         <a href="index.html" class="home-link">🏠 回首頁</a>
       </div>
     </header>
@@ -102,6 +97,8 @@
         <div class="row">
           <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
           <label class="pill"><input type="checkbox" id="byLesson"> 依課次順序（關閉＝隨機混合）</label>
+          <label class="pill"><input type="checkbox" id="katakana"> 只顯示片假名</label>
+          <label class="pill"><input type="checkbox" id="showKanji" checked> 顯示漢字</label>
         </div>
 
         <details>
@@ -116,6 +113,7 @@
           <div class="list" id="bankL8"></div>
         </details>
 
+        <div class="hint">快捷鍵：<span class="kbd">A</span>/<span class="kbd">B</span>/<span class="kbd">C</span> 作答，<span class="kbd">Enter</span> 下一題，<span class="kbd">Space</span> 朗讀</div>
         <div class="row"><button class="btn" id="startBtn">開始測驗 ▶</button></div>
       </section>
 
@@ -153,7 +151,26 @@
   </div>
 
   <script>
+    // ---------- 工具與資料 ----------
     const T = { SUFFIX:"接尾詞", COUNTRY:"國家", TIME:"時間" };
+    const STORAGE_KEY_STARS = "minna_L5_8_stars";
+    const STORAGE_KEY_PREFS = "minna_L5_8_prefs";
+
+    const $ = (s, r=document)=>r.querySelector(s);
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
+    function sampleUnique(arr, n, excludeSet=new Set()){
+      const pool = arr.filter(x=>!excludeSet.has(x));
+      if(n>=pool.length) return shuffle(pool.slice());
+      const out=[]; const used=new Set();
+      while(out.length<n && used.size<pool.length){
+        const it = pool[Math.floor(Math.random()*pool.length)];
+        if(!used.has(it)){ out.push(it); used.add(it); }
+      }
+      return out;
+    }
+    function hira2kata(str){
+      return str.replace(/[\u3041-\u3096]/g,ch=>String.fromCharCode(ch.charCodeAt(0)+0x60));
+    }
     function parseKanjiKanaFlexible(jp){
       let m = jp.match(/^(.*)（(.*)）$/);
       if(m){ return {kana:m[1], kanji:m[2]} }
@@ -167,7 +184,26 @@
       return {id:jp.trim()+"__"+zh.trim(), jp:jp.trim(), zh:zh.trim(), kana, kanji, tags:normTags, l};
     }
 
-    // ---- L5
+    // 顯示文字：依「顯示漢字／片假名」偏好產生
+    function displayKana(word, katakanaOn){
+      const k = word.kana || word.jp;
+      return katakanaOn ? hira2kata(k) : k;
+    }
+    function displayJP(word, showKanji, katakanaOn){
+      if(!showKanji){
+        return displayKana(word, katakanaOn); // 只顯示假名
+      }
+      // 顯示「假名（漢字）」；若本身無漢字，就直接顯示 jp 或假名
+      if(word.kanji && word.kana && word.kanji!==word.kana){
+        return `${displayKana(word, katakanaOn)}（${word.kanji}）`;
+      }
+      // 外來語或無漢字
+      const s = word.jp || word.kana;
+      return katakanaOn ? hira2kata(s) : s;
+    }
+
+    // ---------- 題庫（與你原本相同，略） ----------
+    // L5
     const L5 = [
       toObj("いきます（行きます）","去",[], "L5"),
       toObj("きます（来ます）","來",[], "L5"),
@@ -229,7 +265,7 @@
       toObj("とっきゅう（特急）","特快車",[], "L5"),
     ];
 
-    // ---- L6
+    // L6
     const L6 = [
       toObj("たべます（食べます）","吃",[], "L6"),
       toObj("のみます（飲みます）","喝",[], "L6"),
@@ -283,7 +319,7 @@
       toObj("じゃ、また[あした]。","那麼,〔明天〕再見。",[], "L6"),
     ];
 
-    // ---- L7
+    // L7
     const L7 = [
       toObj("きります（切ります）","切、剪",[], "L7"),
       toObj("おくります（送ります）","寄、送",[], "L7"),
@@ -332,7 +368,7 @@
       toObj("「〜、」すてきですね。","〔〜,〕真不錯啊!",[], "L7"),
     ];
 
-    // ---- L8
+    // L8
     const L8 = [
       toObj("ハンサム","英俊",[], "L8"),
       toObj("きれい","漂亮",[], "L8"),
@@ -385,7 +421,7 @@
 
     const ALL = [...L5, ...L6, ...L7, ...L8];
 
-    // ========= State =========
+    // ---------- 狀態 ----------
     let mode = "jp2zh";
     let pool = [];
     let totalQ = 10;
@@ -396,55 +432,99 @@
     let timeLeft = 60;
     let timerId = null;
     let wrongSet = [];
-    let starSet = new Set(JSON.parse(localStorage.getItem("minna_L5_8_stars")||"[]"));
+    let askedIds = new Set();
+    let starSet = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY_STARS)||"[]"));
 
-    const $ = (s, r=document)=>r.querySelector(s);
-    function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a }
-    function sample(arr, n){ const a = arr.slice(); shuffle(a); return a.slice(0, n); }
-
+    // ---------- DOM 初始化 ----------
+    function renderBankAll(){
+      renderBank($("#bankL5"), L5);
+      renderBank($("#bankL6"), L6);
+      renderBank($("#bankL7"), L7);
+      renderBank($("#bankL8"), L8);
+    }
     function renderBank(target, data){
+      const katakanaOn = $("#katakana").checked;
+      const showKanji = $("#showKanji").checked;
       target.innerHTML = "";
       data.forEach(w=>{
         const d = document.createElement("div");
         d.className = "item";
-        const jk = (w.kanji && w.kana && w.kanji!==w.kana ? `${w.kana}（${w.kanji}）` : w.jp);
+        const left = document.createElement("div");
+        left.innerHTML = `<div style="font-weight:900">${displayJP(w, showKanji, katakanaOn)}</div><div>${w.zh}</div><div class="pill">${w.l}</div>`;
         const btn = document.createElement("button");
         btn.className = "starbtn";
         btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆";
         if(starSet.has(w.id)) btn.classList.add("star-on");
         btn.onclick = ()=>{ toggleStar(w.id); btn.innerHTML = starSet.has(w.id) ? "⭐️" : "☆"; btn.classList.toggle("star-on", starSet.has(w.id)); };
-        const left = document.createElement("div");
-        left.innerHTML = `<div style="font-weight:900">${jk}</div><div>${w.zh}</div><div class="pill">${w.l}</div>`;
         d.appendChild(left); d.appendChild(btn);
         target.appendChild(d);
       });
     }
     function toggleStar(id){
       if(starSet.has(id)) starSet.delete(id); else starSet.add(id);
-      localStorage.setItem("minna_L5_8_stars", JSON.stringify([...starSet]));
+      localStorage.setItem(STORAGE_KEY_STARS, JSON.stringify([...starSet]));
     }
-    renderBank(document.getElementById("bankL5"), L5);
-    renderBank(document.getElementById("bankL6"), L6);
-    renderBank(document.getElementById("bankL7"), L7);
-    renderBank(document.getElementById("bankL8"), L8);
+    renderBankAll();
 
+    // ---------- 偏好記憶 ----------
+    function savePrefs(){
+      const prefs = {
+        useL5: $("#useL5").checked, useL6: $("#useL6").checked, useL7: $("#useL7").checked, useL8: $("#useL8").checked,
+        tagSuffix: $("#tagSuffix").checked, tagCountry: $("#tagCountry").checked, tagTime: $("#tagTime").checked,
+        onlyStar: $("#onlyStar").checked, timed: $("#timed").checked, byLesson: $("#byLesson").checked,
+        katakana: $("#katakana").checked, showKanji: $("#showKanji").checked, totalQ, mode
+      };
+      localStorage.setItem(STORAGE_KEY_PREFS, JSON.stringify(prefs));
+    }
+    function loadPrefs(){
+      const raw = localStorage.getItem(STORAGE_KEY_PREFS);
+      if(!raw) return;
+      try{
+        const p = JSON.parse(raw);
+        ["useL5","useL6","useL7","useL8","tagSuffix","tagCountry","tagTime","onlyStar","timed","byLesson","katakana","showKanji"].forEach(k=>{
+          if(typeof p[k] === "boolean"){ $("#"+k).checked = p[k]; }
+        });
+        if(p.totalQ){ totalQ = p.totalQ; $("#qcount").textContent = "目前：" + totalQ + " 題"; }
+        if(p.mode){ const m = p.mode; const el = document.querySelector(`input[name="mode"][value="${m}"]`); if(el){ el.checked = true; mode=m; } }
+      }catch(e){}
+    }
+    loadPrefs();
+
+    // 題數按鈕
     document.querySelectorAll('[data-q]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; });
+      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); $("#qcount").textContent = "目前：" + totalQ + " 題"; savePrefs(); });
     });
-    document.getElementById("startBtn").addEventListener("click", startQuiz);
-    document.getElementById("speakBtn").addEventListener("click", speakPrompt);
-    document.getElementById("restart").addEventListener("click", ()=>{ document.getElementById("summary").style.display="none"; document.getElementById("setup").style.display="block" });
-    document.getElementById("retryWrong").addEventListener("click", retryWrongOnly);
 
+    // 互動按鈕
+    $("#startBtn").addEventListener("click", startQuiz);
+    $("#speakBtn").addEventListener("click", speakPrompt);
+    $("#restart").addEventListener("click", ()=>{
+      $("#summary").style.display="none"; $("#setup").style.display="block";
+    });
+    $("#retryWrong").addEventListener("click", retryWrongOnly);
+
+    // 單選模式即時存
+    document.querySelectorAll('input[name="mode"]').forEach(r=>{
+      r.addEventListener("change", ()=>{ mode = r.value; savePrefs(); });
+    });
+    // 其他設定即時存＋即時影響清單顯示
+    ["useL5","useL6","useL7","useL8","tagSuffix","tagCountry","tagTime","onlyStar","timed","byLesson","katakana","showKanji"].forEach(id=>{
+      $("#"+id).addEventListener("change", ()=>{
+        savePrefs();
+        if(id==="katakana" || id==="showKanji"){ renderBankAll(); }
+      });
+    });
+
+    // ---------- 池與抽題 ----------
     function buildPool(){
-      const use5 = document.getElementById("useL5").checked;
-      const use6 = document.getElementById("useL6").checked;
-      const use7 = document.getElementById("useL7").checked;
-      const use8 = document.getElementById("useL8").checked;
-      const wantSuffix = document.getElementById("tagSuffix").checked;
-      const wantCountry = document.getElementById("tagCountry").checked;
-      const wantTime = document.getElementById("tagTime").checked;
-      const onlyStar = document.getElementById("onlyStar").checked;
+      const use5 = $("#useL5").checked;
+      const use6 = $("#useL6").checked;
+      const use7 = $("#useL7").checked;
+      const use8 = $("#useL8").checked;
+      const wantSuffix = $("#tagSuffix").checked;
+      const wantCountry = $("#tagCountry").checked;
+      const wantTime = $("#tagTime").checked;
+      const onlyStar = $("#onlyStar").checked;
 
       let p = ALL.filter(w => (w.l==="L5" && use5) || (w.l==="L6" && use6) || (w.l==="L7" && use7) || (w.l==="L8" && use8));
       if(wantSuffix || wantCountry || wantTime){
@@ -456,7 +536,7 @@
         });
       }
       if(onlyStar){ p = p.filter(w=> starSet.has(w.id)); }
-      const byLesson = document.getElementById("byLesson").checked;
+      const byLesson = $("#byLesson").checked;
       if(byLesson){
         const order = ["L5","L6","L7","L8"];
         p.sort((a,b)=> order.indexOf(a.l) - order.indexOf(b.l));
@@ -466,146 +546,194 @@
       return p;
     }
 
+    // ---------- 計時 ----------
     function startTimer(){
       if(!timed){ return; }
       clearInterval(timerId);
-      document.getElementById("timeChip").style.display = "inline-block";
-      document.getElementById("timeLeft").textContent = timeLeft;
+      $("#timeChip").style.display = "inline-block";
+      $("#timeLeft").textContent = timeLeft;
       timerId = setInterval(()=>{
         timeLeft--;
-        document.getElementById("timeLeft").textContent = timeLeft;
+        $("#timeLeft").textContent = timeLeft;
         if(timeLeft<=0){ clearInterval(timerId); endQuiz(true); }
       }, 1000);
     }
     function addBonusSeconds(n=3){
       if(!timed) return;
       timeLeft = Math.min(timeLeft + n, 999);
-      document.getElementById("timeLeft").textContent = timeLeft;
+      $("#timeLeft").textContent = timeLeft;
       const t = document.createElement("span"); t.textContent = `+${n}s`; t.style.marginLeft="6px"; t.style.color="var(--ok)"; t.style.fontWeight="900";
-      const chip = document.getElementById("timeChip"); chip.appendChild(t); setTimeout(()=>t.remove(), 600);
+      const chip = $("#timeChip"); chip.appendChild(t); setTimeout(()=>t.remove(), 600);
     }
 
+    // ---------- 進入測驗 ----------
     function startQuiz(){
       mode = document.querySelector('input[name="mode"]:checked').value;
       pool = buildPool();
       if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
-      timed = document.getElementById("timed").checked;
+      timed = $("#timed").checked;
       timeLeft = 60;
-      qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
-      document.getElementById("score").textContent = "0"; document.getElementById("streak").textContent = "0";
-      document.getElementById("setup").style.display="none";
-      document.getElementById("quiz").style.display="block";
-      document.getElementById("summary").style.display="none";
-      document.getElementById("modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
+      qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = []; askedIds.clear();
+      $("#score").textContent = "0"; $("#streak").textContent = "0";
+      $("#setup").style.display="none";
+      $("#quiz").style.display="block";
+      $("#summary").style.display="none";
+      $("#modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
       startTimer();
       nextQuestion();
     }
 
-    function nextQuestion(){
-      document.getElementById("resultBox").style.display="none";
-      document.getElementById("nextBtn").disabled = true;
-      if(qIndex >= totalQ){ endQuiz(); return; }
-      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%";
-
-      const q = pool[Math.floor(Math.random()*pool.length)];
-      let opts;
-      const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
-
-      if(mode==="kanji2kana"){
-        const prompt = q.kanji || q.jp;
-        const distractors = sample(ALL.filter(w=> w.kana!==q.kana), 2);
-        opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = prompt + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.kana), q.kana, q);
-        document.getElementById("choices").dataset.prompt = q.kana;
-      } else if(mode==="jp2zh"){
-        const distractors = sample(ALL.filter(w=> w.zh!==q.zh), 2);
-        opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = q.jp + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.zh), q.zh, q);
-        document.getElementById("choices").dataset.prompt = q.jp;
-      } else {
-        const distractors = sample(ALL.filter(w=> w.jp!==q.jp), 2);
-        opts = shuffle([q, ...distractors]);
-        document.getElementById("qtext").innerHTML = q.zh + " " + starBtnHTML;
-        renderChoices(opts.map(o=>o.jp), q.jp, q);
-        document.getElementById("choices").dataset.prompt = q.jp;
-      }
-
-      const starBtn = document.getElementById("starQBtn");
-      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
-
-      document.getElementById("nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+    // ---------- 出題（不重複） ----------
+    function pickNext(){
+      const remain = pool.filter(w=>!askedIds.has(w.id));
+      if(remain.length===0) return null;
+      return remain[Math.floor(Math.random()*remain.length)];
     }
 
-    function renderChoices(texts, correctText, qobj){
-      const choices = document.getElementById("choices"); choices.innerHTML="";
+    function nextQuestion(){
+      $("#resultBox").style.display="none";
+      $("#nextBtn").disabled = true;
+      if(qIndex >= totalQ){ endQuiz(); return; }
+      $("#meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
+      $("#bar").style.width = ((qIndex)/totalQ)*100 + "%";
+
+      const q = pickNext();
+      if(!q){ endQuiz(); return; }
+      askedIds.add(q.id);
+
+      const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
+
+      const katakanaOn = $("#katakana").checked;
+      const showKanji = $("#showKanji").checked;
+
+      let opts;
+      if(mode==="kanji2kana"){
+        // 讀音模式：固定出「漢字」→ 假名
+        const prompt = q.kanji || q.jp;
+        const distractors = sampleUnique(ALL.filter(w=> w.kana!==q.kana), 2);
+        opts = shuffle([q, ...distractors]);
+        $("#qtext").innerHTML = prompt + " " + starBtnHTML;
+        const texts = opts.map(o=> katakanaOn ? hira2kata(o.kana) : o.kana);
+        renderChoices(texts, (katakanaOn ? hira2kata(q.kana) : q.kana), q, ["A","B","C"]);
+        $("#choices").dataset.prompt = katakanaOn ? hira2kata(q.kana) : q.kana;
+      } else if(mode==="jp2zh"){
+        // 題目顯示日文（依漢字/片假名設定），選項是中文
+        const distractors = sampleUnique(ALL.filter(w=> w.zh!==q.zh), 2);
+        opts = shuffle([q, ...distractors]);
+        $("#qtext").innerHTML = displayJP(q, showKanji, katakanaOn) + " " + starBtnHTML;
+        renderChoices(opts.map(o=>o.zh), q.zh, q, ["A","B","C"]);
+        $("#choices").dataset.prompt = q.kana; // 朗讀用假名
+      } else {
+        // 看到中文 → 選日文（選項依漢字/片假名設定）
+        const distractors = sampleUnique(ALL.filter(w=> w.jp!==q.jp), 2);
+        opts = shuffle([q, ...distractors]);
+        $("#qtext").innerHTML = q.zh + " " + starBtnHTML;
+        const showTexts = opts.map(o=> displayJP(o, showKanji, katakanaOn));
+        const correctShow = displayJP(q, showKanji, katakanaOn);
+        renderChoices(showTexts, correctShow, q, ["A","B","C"]);
+        $("#choices").dataset.prompt = q.kana; // 朗讀用假名
+      }
+
+      const starBtn = $("#starQBtn");
+      starBtn.onclick = ()=>{ toggleStar(q.id); starBtn.textContent = starSet.has(q.id) ? "⭐️" : "☆"; starBtn.classList.toggle("star-on", starSet.has(q.id)); };
+
+      $("#nextBtn").onclick = ()=>{ qIndex++; nextQuestion(); };
+    }
+
+    function renderChoices(texts, correctText, qobj, labels){
+      const choices = $("#choices"); choices.innerHTML="";
       texts.forEach((txt, idx)=>{
         const div = document.createElement("div");
         div.className="choice";
-        div.innerHTML = `<div class="key">${"ABC"[idx]}</div><div class="text">${txt}</div>`;
+        div.setAttribute("role","button");
+        div.innerHTML = `<div class="key">${labels[idx]||String.fromCharCode(65+idx)}</div><div class="text">${txt}</div>`;
         div.addEventListener("click", ()=>onChoose(txt, correctText, qobj));
         choices.appendChild(div);
       });
+      // 鍵盤快捷
+      const keyMap = {a:0,b:1,c:2};
+      document.onkeydown = (e)=>{
+        if($("#quiz").style.display==="none") return;
+        const k = e.key.toLowerCase();
+        if(k===" "){ e.preventDefault(); speakPrompt(); }
+        else if(k==="enter"){
+          e.preventDefault();
+          if(!$("#nextBtn").disabled){ $("#nextBtn").click(); }
+        }else if(k in keyMap){
+          const i = keyMap[k];
+          const el = choices.children[i];
+          if(el) el.click();
+        }
+      };
     }
+
     function onChoose(chosenText, correctText, q){
       const ok = (chosenText === correctText);
-      const box = document.getElementById("resultBox");
-      const head = document.getElementById("resHead");
-      const body = document.getElementById("resBody");
+      const box = $("#resultBox");
+      const head = $("#resHead");
+      const body = $("#resBody");
       if(ok){
         score++; streak++; bestStreak = Math.max(bestStreak, streak);
-        document.getElementById("score").textContent = score; document.getElementById("streak").textContent = streak;
+        $("#score").textContent = score; $("#streak").textContent = streak;
         box.classList.remove("bad"); box.classList.add("ok");
         head.textContent = "✅ 正確！";
         if(timed) addBonusSeconds(3);
       }else{
-        streak=0; document.getElementById("streak").textContent = streak;
+        streak=0; $("#streak").textContent = streak;
         box.classList.remove("ok"); box.classList.add("bad");
         head.textContent = "❌ 答錯了";
         wrongSet.push(q);
       }
+
+      const katakanaOn = $("#katakana").checked;
+      const showKanji = $("#showKanji").checked;
+
       if(mode==="kanji2kana"){
-        body.textContent = `${q.kanji} → ${q.kana}｜${q.zh}`;
+        const showKana = katakanaOn ? hira2kata(q.kana) : q.kana;
+        body.textContent = `${q.kanji} → ${showKana}｜${q.zh}`;
       }else if(mode==="jp2zh"){
-        body.textContent = `${q.jp} → ${q.zh}`;
+        body.textContent = `${displayJP(q, showKanji, katakanaOn)} → ${q.zh}`;
       }else{
-        body.textContent = `${q.zh} → ${q.jp}`;
+        body.textContent = `${q.zh} → ${displayJP(q, showKanji, katakanaOn)}`;
       }
       box.style.display="block";
-      document.getElementById("nextBtn").disabled = false;
+      $("#nextBtn").disabled = false;
     }
 
     function endQuiz(timeUp=false){
       clearInterval(timerId); timerId=null;
-      document.getElementById("quiz").style.display="none";
-      document.getElementById("summary").style.display="block";
-      document.getElementById("finalScore").textContent = score;
-      document.getElementById("finalTotal").textContent = totalQ;
-      document.getElementById("finalStreak").textContent = bestStreak;
-      document.getElementById("bar").style.width = "100%";
-      document.getElementById("timeChip").style.display = "none";
-      const btn = document.getElementById("retryWrong");
+      $("#quiz").style.display="none";
+      $("#summary").style.display="block";
+      $("#finalScore").textContent = score;
+      $("#finalTotal").textContent = totalQ;
+      $("#finalStreak").textContent = bestStreak;
+      $("#bar").style.width = "100%";
+      $("#timeChip").style.display = "none";
+      const btn = $("#retryWrong");
       btn.disabled = wrongSet.length===0;
       if(timeUp){ alert("時間到！看看這回合成績～"); }
+      document.onkeydown = null;
     }
+
     function retryWrongOnly(){
       if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
       const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
       pool = [...map.values()];
-      // 保持原模式
       timed = false;
       qIndex=0; score=0; streak=0; bestStreak=0;
-      document.getElementById("score").textContent = "0";
-      document.getElementById("streak").textContent = "0";
-      document.getElementById("summary").style.display="none";
-      document.getElementById("quiz").style.display="block";
+      askedIds.clear();
+      $("#score").textContent = "0";
+      $("#streak").textContent = "0";
+      $("#summary").style.display="none";
+      $("#quiz").style.display="block";
+      $("#modeTag").textContent = mode==="jp2zh"?"JP→ZH":(mode==="zh2jp"?"ZH→JP":"漢字→假名");
       nextQuestion();
     }
 
     function speakPrompt(){
-      const utter = new SpeechSynthesisUtterance(document.getElementById("choices").dataset.prompt || "");
+      const text = $("#choices").dataset.prompt || "";
+      if(!text) return;
+      const utter = new SpeechSynthesisUtterance(text);
       utter.lang = "ja-JP";
       speechSynthesis.stop();
       speechSynthesis.speak(utter);
@@ -614,5 +742,4 @@
 </body>
 </html>
 
-</body>
 </html>
