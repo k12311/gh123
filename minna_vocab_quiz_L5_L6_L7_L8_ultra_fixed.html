@@ -102,6 +102,7 @@
         <div class="row">
           <button class="pill" data-q="10">10 題</button>
           <button class="pill" data-q="20">20 題</button>
+          <button class="pill" data-q="all">全部</button>
           <span id="qcount" class="pill">目前：10 題</span>
         </div>
         <div class="row">
@@ -434,7 +435,7 @@
     // ---------- 狀態 ----------
     let mode = "jp2zh";
     let pool = [];
-    let totalQ = 10;
+    let totalQ = 10; // 可為數字，或 'all' 代表全部出題
     let qIndex = 0;
     let score = 0;
     let streak = 0, bestStreak = 0;
@@ -494,7 +495,10 @@
         ["useL5","useL6","useL7","useL8","tagTime","onlyStar","timed","byLesson","katakana","showKanji"].forEach(k=>{
           if(typeof p[k] === "boolean"){ $("#"+k).checked = p[k]; }
         });
-        if(p.totalQ){ totalQ = p.totalQ; $("#qcount").textContent = "目前：" + totalQ + " 題"; }
+        if(p.totalQ){
+          totalQ = p.totalQ;
+          $("#qcount").textContent = totalQ === "all" ? "目前：全部" : "目前：" + totalQ + " 題";
+        }
         if(p.mode){ const m = p.mode; const el = document.querySelector(`input[name="mode"][value="${m}"]`); if(el){ el.checked = true; mode=m; } }
       }catch(e){}
     }
@@ -502,7 +506,11 @@
 
     // 題數按鈕
     document.querySelectorAll('[data-q]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); $("#qcount").textContent = "目前：" + totalQ + " 題"; savePrefs(); });
+      btn.addEventListener('click',()=>{
+        totalQ = btn.dataset.q === "all" ? "all" : parseInt(btn.dataset.q,10);
+        $("#qcount").textContent = totalQ === "all" ? "目前：全部" : "目前：" + totalQ + " 題";
+        savePrefs();
+      });
     });
 
     // 互動按鈕
@@ -574,9 +582,11 @@
       mode = document.querySelector('input[name="mode"]:checked').value;
       pool = buildPool();
       if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
+      const quizTotal = totalQ === "all" ? pool.length : Math.min(totalQ, pool.length);
       timed = $("#timed").checked;
       timeLeft = 60;
       qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = []; askedIds.clear();
+      window.currentQuizTotal = quizTotal;
       $("#score").textContent = "0"; $("#streak").textContent = "0";
       $("#setup").style.display="none";
       $("#quiz").style.display="block";
@@ -596,9 +606,9 @@
     function nextQuestion(){
       $("#resultBox").style.display="none";
       $("#nextBtn").disabled = true;
-      if(qIndex >= totalQ){ endQuiz(); return; }
-      $("#meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      $("#bar").style.width = ((qIndex)/totalQ)*100 + "%";
+      if(qIndex >= (window.currentQuizTotal || totalQ)){ endQuiz(); return; }
+      $("#meta").textContent = `第 ${qIndex+1} / ${(window.currentQuizTotal || totalQ)} 題`;
+      $("#bar").style.width = ((qIndex)/(window.currentQuizTotal || totalQ))*100 + "%";
 
       const q = pickNext();
       if(!q){ endQuiz(); return; }
@@ -708,7 +718,7 @@
       $("#quiz").style.display="none";
       $("#summary").style.display="block";
       $("#finalScore").textContent = score;
-      $("#finalTotal").textContent = totalQ;
+      $("#finalTotal").textContent = window.currentQuizTotal || totalQ;
       $("#finalStreak").textContent = bestStreak;
       $("#bar").style.width = "100%";
       $("#timeChip").style.display = "none";
@@ -722,6 +732,7 @@
       if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
       const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
       pool = [...map.values()];
+      window.currentQuizTotal = pool.length;
       timed = false;
       qIndex=0; score=0; streak=0; bestStreak=0;
       askedIds.clear();
