@@ -98,7 +98,8 @@
         <div class="row">
           <button class="pill" data-q="10">10 題</button>
           <button class="pill" data-q="20">20 題</button>
-          <span id="qcount" class="pill">目前：10 題</span>
+          <button class="pill" data-q="all">全部題</button>
+          <span id="qcount" class="pill">目前：10 題（也可選全部題）</span>
         </div>
         <div class="row">
           <label class="pill"><input type="checkbox" id="timed"> 限時模式（60 秒，連對 +3 秒）</label>
@@ -187,15 +188,15 @@
       toObj("クラシック","古典音樂",[], "L9"),
       toObj("ジャズ","爵士樂",[], "L9"),
       toObj("コンサート","音樂會、演唱會",[], "L9"),
-      toObj("カラオケ","卡拉OK、KTV",[], "L9"),
-      toObj("かぶき（歌舞伎）","歌舞伎（日本傳統戲劇）",[], "L9"),
+      toObj("カラオケ","卡拉 OK、KTV",[], "L9"),
+      toObj("かぶき（歌舞伎）","歌舞伎（日本傳統戲劇之一）",[], "L9"),
       toObj("え（絵）","畫",[], "L9"),
       toObj("じ（字）","字",[], "L9"),
       toObj("かんじ（漢字）","漢字",[], "L9"),
       toObj("ひらがな","平假名",[], "L9"),
       toObj("かたかな","片假名",[], "L9"),
       toObj("ローマじ（ローマ字）","羅馬字母",[], "L9"),
-      toObj("こまかいおかね（細かいお金）","零錢",[], "L9"),
+      toObj("こまかい おかね（細かいお金）","零錢",[], "L9"),
       toObj("チケット","票",[], "L9"),
       toObj("じかん（時間）","時間",[T.TIME], "L9"),
       toObj("ようじ（用事）","事情",[], "L9"),
@@ -371,6 +372,7 @@
     // ========= State =========
     let mode = "jp2zh";
     let pool = [];
+    let quizItems = []; // 本回合實際要出的題目；全部題會放入所有題目，且不重複
     let totalQ = 10;
     let qIndex = 0;
     let score = 0;
@@ -412,7 +414,10 @@
     renderBank(document.getElementById("bankL12"), L12);
 
     document.querySelectorAll('[data-q]').forEach(btn=>{
-      btn.addEventListener('click',()=>{ totalQ = parseInt(btn.dataset.q,10); document.getElementById("qcount").textContent = "目前：" + totalQ + " 題"; });
+      btn.addEventListener('click',()=>{
+        totalQ = btn.dataset.q === "all" ? "all" : parseInt(btn.dataset.q,10);
+        document.getElementById("qcount").textContent = totalQ === "all" ? "目前：全部題" : "目前：" + totalQ + " 題";
+      });
     });
     document.getElementById("startBtn").addEventListener("click", startQuiz);
     document.getElementById("speakBtn").addEventListener("click", speakPrompt);
@@ -472,6 +477,15 @@
       mode = document.querySelector('input[name="mode"]:checked').value;
       pool = buildPool();
       if(pool.length < 3){ alert("題庫過小：請調整範圍或取消過度的標籤/星號篩選。"); return; }
+
+      // 產生本回合題目：按「全部題」時直接放入篩選後全部題庫；10/20 題則不重複抽題
+      const byLesson = document.getElementById("byLesson").checked;
+      quizItems = pool.slice();
+      if(!byLesson){ shuffle(quizItems); }
+      if(totalQ !== "all"){
+        quizItems = quizItems.slice(0, Math.min(totalQ, quizItems.length));
+      }
+
       timed = document.getElementById("timed").checked;
       timeLeft = 60;
       qIndex=0; score=0; streak=0; bestStreak=0; wrongSet = [];
@@ -487,11 +501,11 @@
     function nextQuestion(){
       document.getElementById("resultBox").style.display="none";
       document.getElementById("nextBtn").disabled = true;
-      if(qIndex >= totalQ){ endQuiz(); return; }
-      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${totalQ} 題`;
-      document.getElementById("bar").style.width = ((qIndex)/totalQ)*100 + "%";
+      if(qIndex >= quizItems.length){ endQuiz(); return; }
+      document.getElementById("meta").textContent = `第 ${qIndex+1} / ${quizItems.length} 題`;
+      document.getElementById("bar").style.width = ((qIndex)/quizItems.length)*100 + "%";
 
-      const q = pool[Math.floor(Math.random()*pool.length)];
+      const q = quizItems[qIndex];
       let opts;
       const starBtnHTML = `<button class="starbtn ${starSet.has(q.id)?'star-on':''}" id="starQBtn" title="加星">${starSet.has(q.id)?'⭐️':'☆'}</button>`;
 
@@ -565,7 +579,7 @@
       document.getElementById("quiz").style.display="none";
       document.getElementById("summary").style.display="block";
       document.getElementById("finalScore").textContent = score;
-      document.getElementById("finalTotal").textContent = totalQ;
+      document.getElementById("finalTotal").textContent = quizItems.length;
       document.getElementById("finalStreak").textContent = bestStreak;
       document.getElementById("bar").style.width = "100%";
       document.getElementById("timeChip").style.display = "none";
@@ -577,6 +591,7 @@
       if(wrongSet.length===0){ alert("沒有錯題可重練！"); return; }
       const map = new Map(); wrongSet.forEach(w=>map.set(w.id,w));
       pool = [...map.values()];
+      quizItems = pool.slice();
       timed = false;
       qIndex=0; score=0; streak=0; bestStreak=0;
       document.getElementById("score").textContent = "0";
