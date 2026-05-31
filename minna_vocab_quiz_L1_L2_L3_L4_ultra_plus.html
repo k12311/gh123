@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
@@ -91,6 +91,7 @@
         <div class="row">
           <button class="pill" data-q="10">10 題</button>
           <button class="pill" data-q="20">20 題</button>
+          <button class="pill" data-q="all">全部</button>
           <span id="qcount" class="pill">目前：10 題</span>
         </div>
         <div class="row">
@@ -297,7 +298,7 @@
         ['useL1','useL2','useL3','useL4','tagSuffix','tagCountry','tagTime','onlyStar','timed','byLesson','katakanaOnly','showKanji','kanjiOptions'].forEach(k=>{
           if(typeof p[k]==='boolean'){ els[k].checked = p[k]; }
         });
-        if(typeof p.total==='number'){ S.total=p.total; els.qcount.textContent=`目前：${S.total} 題`; }
+        if(typeof p.total==='number' || p.total==='all'){ S.total=p.total; els.qcount.textContent = S.total==='all' ? '目前：全部' : `目前：${S.total} 題`; }
         if(typeof p.mode==='string'){ S.mode=p.mode; const r=document.querySelector(`input[name="mode"][value="${S.mode}"]`); if(r) r.checked=true; }
       }catch(e){}
     }
@@ -361,9 +362,10 @@
     // ---- 出題 ----
     function buildQuestionPool(){
       const pool=getFilteredBank(); if(pool.length===0) return [];
+      const wantedTotal = S.total === 'all' ? pool.length : Math.min(Number(S.total), pool.length);
       const picked = els.byLesson.checked
-        ? ['L1','L2','L3','L4'].flatMap(L=>shuffle(pool.filter(x=>x.lesson===L))).slice(0,S.total)
-        : sample(pool, Math.min(S.total, pool.length));
+        ? ['L1','L2','L3','L4'].flatMap(L=>shuffle(pool.filter(x=>x.lesson===L))).slice(0,wantedTotal)
+        : sample(pool, wantedTotal);
 
       const katakanaOnly = els.katakanaOnly.checked;
       const showKanji = els.showKanji.checked;
@@ -480,7 +482,11 @@
 
     // ---- 事件：模式/題數/顯示選項 ----
     $$('input[name="mode"]').forEach(r=> r.addEventListener('change',()=>{ S.mode=r.value; savePrefs(); updateHud(); }));
-    $$('button[data-q]').forEach(btn=> btn.addEventListener('click',()=>{ S.total=Number(btn.dataset.q); els.qcount.textContent=`目前：${S.total} 題`; savePrefs(); }));
+    $$('button[data-q]').forEach(btn=> btn.addEventListener('click',()=>{
+      S.total = btn.dataset.q === 'all' ? 'all' : Number(btn.dataset.q);
+      els.qcount.textContent = S.total === 'all' ? '目前：全部' : `目前：${S.total} 題`;
+      savePrefs();
+    }));
 
     // 影響清單顯示的選項：即時更新＋存偏好
     ['katakanaOnly','showKanji','kanjiOptions','useL1','useL2','useL3','useL4','tagSuffix','tagCountry','tagTime','onlyStar','byLesson','timed']
@@ -493,7 +499,7 @@
       S.mode=($('input[name="mode"]:checked')?.value)||S.mode;
       S.questions=buildQuestionPool();
       if(S.questions.length===0){ alert('沒有符合篩選條件的題目。\n請調整課次或標籤/星號篩選。'); return; }
-      S.total=Math.min(S.total,S.questions.length); S.running=true;
+      S.total = S.questions.length; S.running=true;
       els.setup.style.display='none'; els.summary.style.display='none'; els.quiz.style.display='block';
       els.nextBtn.disabled=true; updateHud(); renderQuestion();
       if(els.timed.checked) startTimer(); else stopTimer();
@@ -568,7 +574,7 @@
       loadPrefs();
       renderBankListsWithSettings();
       // 題數按鈕也要同步文字
-      els.qcount.textContent=`目前：${S.total} 題`;
+      els.qcount.textContent = S.total==='all' ? '目前：全部' : `目前：${S.total} 題`;
     }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', onReady); else onReady();
   </script>
